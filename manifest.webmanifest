@@ -1,0 +1,15 @@
+{
+  "name": "Stok Buah Kapten Juz",
+  "short_name": "Stok Buah",
+  "description": "Catat buah masuk, keluar, dan waste, lengkap dengan laporan bulanan.",
+  "lang": "id",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6F0",
+  "theme_color": "#14513B",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
