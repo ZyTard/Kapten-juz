@@ -125,6 +125,11 @@ th.n,td.n{text-align:right;font-variant-numeric:tabular-nums}
 .b-masuk{background:var(--c-masuk)}.b-produksi{background:var(--c-produksi)}.b-eceran{background:var(--c-eceran)}.b-waste{background:var(--c-waste)}.b-koreksi{background:var(--c-koreksi)}
 .x{border:0;background:transparent;color:var(--danger);font-weight:700;font-size:14px;padding:8px;cursor:pointer;min-height:40px}
 
+.fr{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.fr-t{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.fr-t .hint{flex-basis:100%}
+.fl2{display:flex;flex-direction:column;gap:10px}
+.chips.wrap{flex-wrap:wrap;overflow:visible}
 /* Nav, dialog, toast */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
 .tabs button{flex:1;border:0;background:none;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;min-height:60px}
@@ -193,9 +198,19 @@ const monthShort = m => new Date(m+'-01T00:00:00').toLocaleDateString('id-ID',{m
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+const normName = s => cap(String(s==null?'':s).trim().replace(/\s+/g,' '));
+function lev(a,b){
+  const m=a.length, n=b.length, d=[];
+  for(let i=0;i<=m;i++) d[i]=[i];
+  for(let j=1;j<=n;j++) d[0][j]=j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+    d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[m][n];
+}
+function similar(a,b){ a=a.toLowerCase(); b=b.toLowerCase(); return Math.min(a.length,b.length)>=4 && lev(a,b)<=1; }
 
 /* ---------- Data ---------- */
-function fresh(){ return {v:1, fruits:DEFAULT_FRUITS.slice(), entries:[], settings:{user:'', target:''}}; }
+function fresh(){ return {v:1, fruits:DEFAULT_FRUITS.slice(), hidden:[], entries:[], settings:{user:'', target:''}}; }
 function load(){
   try{
     const raw = localStorage.getItem(KEY);
@@ -203,6 +218,7 @@ function load(){
     const d = JSON.parse(raw);
     if(!d || !Array.isArray(d.entries) || !Array.isArray(d.fruits)) return fresh();
     d.settings = Object.assign({user:'',target:''}, d.settings||{});
+    d.hidden = Array.isArray(d.hidden) ? d.hidden : [];
     return d;
   }catch(e){ return fresh(); }
 }
@@ -227,6 +243,14 @@ function stock(){
   S.entries.forEach(e => { get(e.fruit)[e.type] += e.kg; });
   Object.values(m).forEach(r => { r.stok = Math.round((r.masuk + r.koreksi - r.produksi - r.eceran - r.waste)*100)/100; });
   return m;
+}
+const activeFruits = () => S.fruits.filter(f => !S.hidden.includes(f));
+const findFruit = name => { const l = name.toLowerCase(); return S.fruits.find(f => f.toLowerCase()===l) || null; };
+function quickFruits(){
+  const act = activeFruits(), out = [];
+  S.entries.slice().sort((a,b)=>b.ts-a.ts).forEach(e => { if(out.length<8 && act.includes(e.fruit) && !out.includes(e.fruit)) out.push(e.fruit); });
+  act.slice().sort((a,b)=>a.localeCompare(b,'id')).forEach(f => { if(out.length<8 && !out.includes(f)) out.push(f); });
+  return out;
 }
 function monthStats(m){
   const r = {masuk:0,produksi:0,eceran:0,waste:0,koreksi:0,kupas:0,cats:{},stages:{},fruits:{}};
@@ -276,7 +300,8 @@ function viewStok(){
   if(!S.entries.length){
     return `<section class="card empty"><h2>Belum ada catatan</h2>
       <p>Mulai dengan mencatat buah yang baru masuk. Stok tiap buah dihitung otomatis dari catatan masuk, keluar, dan waste.</p>
-      <button class="btn pri" data-act="tab" data-v="catat">Catat buah masuk</button></section>`;
+      <button class="btn pri" data-act="tab" data-v="catat">Catat buah masuk</button>
+      <button class="btn" data-act="fruits">Atur daftar buah</button></section>`;
   }
   const st = stock();
   const names = Object.keys(st).sort((a,b)=>a.localeCompare(b,'id'));
@@ -284,8 +309,7 @@ function viewStok(){
   const ms = monthStats(thisMonth());
   const cards = names.map(n => {
     const r = st[n]; const neg = r.stok < 0;
-    const used = r.masuk||r.produksi||r.eceran||r.waste||r.koreksi;
-    if(!used && !S.fruits.includes(n)) return '';
+    if(S.hidden.includes(n) && r.stok===0) return '';
     return `<article class="fc ${neg?'neg':''}">
       <div class="fc-h"><h3>${esc(n)}</h3><button class="btn sm" data-act="opname" data-fruit="${esc(n)}">Hitung fisik</button></div>
       <p class="stk"><strong>${kg(r.stok)}</strong> di gudang</p>
@@ -300,14 +324,14 @@ function viewStok(){
   return `<section class="sum">
       <div><span class="lbl">Total stok sekarang</span><strong>${kg(total)}</strong></div>
       <div class="w"><span class="lbl">Waste ${esc(monthLabel(thisMonth()))}</span><strong>${ms.pct==null?'\u2013':pct(ms.pct)}</strong></div>
-    </section>${cards}`;
+    </section>${cards}<button class="btn" data-act="fruits">Kelola daftar buah</button>`;
 }
 
 /* ---------- Tampilan: Catat ---------- */
 function viewCatat(){
   const t = ui.type, d = ui.draft;
-  const opts = S.fruits.slice().sort((a,b)=>a.localeCompare(b,'id'))
-    .map(f=>`<option ${f===d.fruit?'selected':''}>${esc(f)}</option>`).join('');
+  const opts = activeFruits().sort((a,b)=>a.localeCompare(b,'id')).map(f=>`<option value="${esc(f)}"></option>`).join('');
+  const quick = quickFruits().map(f=>`<button type="button" class="chip" data-act="pick-fruit" data-fruit="${esc(f)}" aria-pressed="${f===d.fruit}">${esc(f)}</button>`).join('');
   let extra = '';
   if(t==='masuk') extra = `
     <div class="field"><label for="f-price">Harga beli per kg (Rp), boleh kosong</label><input id="f-price" name="price" type="number" inputmode="numeric" min="0" step="any"></div>
@@ -325,8 +349,11 @@ function viewCatat(){
   <form id="f" class="card form" novalidate>
     <div class="field"><label for="f-date">Tanggal</label><input id="f-date" name="date" type="date" value="${esc(d.date)}" max="${todayStr()}"></div>
     <div class="field"><label for="f-fruit">Jenis buah</label>
-      <select id="f-fruit" name="fruit"><option value="">Pilih buah</option>${opts}</select>
-      <button type="button" class="link" data-act="add-fruit">Tambah jenis buah baru</button></div>
+      <input id="f-fruit" name="fruit" type="text" list="fruit-list" autocomplete="off" placeholder="Ketik nama buah atau pilih di bawah" value="${esc(d.fruit)}">
+      <datalist id="fruit-list">${opts}</datalist>
+      ${quick?`<div class="chips wrap">${quick}</div>`:''}
+      <p class="hint">Buah yang belum ada di daftar otomatis ditambahkan saat disimpan.</p>
+      <button type="button" class="link" data-act="fruits">Kelola daftar buah</button></div>
     <div class="field"><label for="f-kg">${kgLabel} (kg)</label>
       <div class="kg"><input id="f-kg" name="kg" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><span>kg</span></div></div>
     ${extra}
@@ -338,11 +365,11 @@ function viewCatat(){
 
 async function submitEntry(form){
   const fd = new FormData(form), t = ui.type;
-  const e = {id:uid(), ts:Date.now(), type:t, date:String(fd.get('date')||''), fruit:String(fd.get('fruit')||''),
+  const e = {id:uid(), ts:Date.now(), type:t, date:String(fd.get('date')||''), fruit:normName(fd.get('fruit')),
     kg:parseFloat(String(fd.get('kg')||'').replace(',','.')), user:String(fd.get('user')||'').trim()};
   const errs = [];
   if(!e.date) errs.push('Isi tanggal.'); else if(e.date>todayStr()) errs.push('Tanggal tidak boleh di masa depan.');
-  if(!e.fruit) errs.push('Pilih jenis buah.');
+  if(!e.fruit) errs.push('Isi jenis buah.');
   if(!isFinite(e.kg) || e.kg<=0) errs.push('Isi berat lebih dari 0 kg.');
   if(!e.user) errs.push('Isi nama pencatat.');
   const price = parseFloat(fd.get('price')); if(isFinite(price) && price>=0) e.price = price;
@@ -357,6 +384,15 @@ async function submitEntry(form){
   const box = $('#f-err');
   if(errs.length){ box.innerHTML = `<div class="err" role="alert"><ul>${errs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`; box.scrollIntoView({block:'center'}); return; }
   box.innerHTML = '';
+  const known = findFruit(e.fruit);
+  if(known) e.fruit = known;
+  else {
+    const sim = S.fruits.find(f => similar(f, e.fruit));
+    if(sim){
+      const okNew = await ask('Buah baru?', `"${e.fruit}" mirip dengan "${sim}" yang sudah ada. Simpan sebagai buah baru?`, 'Ya, buah baru');
+      if(!okNew){ const fi = $('#f-fruit'); if(fi) fi.focus(); return; }
+    }
+  }
   if(t!=='masuk'){
     const s = stock()[e.fruit]; const avail = s ? s.stok : 0;
     if(e.kg > avail + 0.001){
@@ -364,10 +400,13 @@ async function submitEntry(form){
       if(!ok) return;
     }
   }
+  let added = false;
+  if(!known){ S.fruits.push(e.fruit); added = true; }
+  else if(S.hidden.includes(e.fruit)) S.hidden = S.hidden.filter(f => f!==e.fruit);
   S.entries.push(e);
   S.settings.user = e.user;
   ui.draft = {date:e.date, fruit:e.fruit, user:e.user};
-  if(save()) toast(`Tersimpan: ${TYPES[t].label.toLowerCase()} ${kg(e.kg)} ${e.fruit}`);
+  if(save()) toast(`Tersimpan: ${TYPES[t].label.toLowerCase()} ${kg(e.kg)} ${e.fruit}.${added?' Buah baru masuk ke daftar.':''}`);
   render();
 }
 
@@ -432,6 +471,14 @@ function viewRiwayat(){
 }
 
 /* ---------- Render ---------- */
+function keepForm(fn){
+  const f = $('#f');
+  const snap = f ? Array.from(new FormData(f).entries()) : null;
+  fn();
+  const nf2 = $('#f');
+  if(snap && nf2) snap.forEach(([k,v]) => { if(k==='fruit') return; const el = nf2.elements[k]; if(el && 'value' in el) el.value = v; });
+}
+dlg.addEventListener('close', () => { if(ui.dirty){ ui.dirty = false; keepForm(render); } });
 function render(){
   app.innerHTML = {stok:viewStok, catat:viewCatat, laporan:viewLaporan, riwayat:viewRiwayat}[ui.tab]();
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-current', b.dataset.v===ui.tab?'page':'false'));
@@ -463,37 +510,71 @@ function submitOpname(form){
   if(save()) toast(`Koreksi ${skg(delta)} untuk ${name} tersimpan`);
   render();
 }
-function openAddFruit(back){
-  openDlg(`<form id="f-fruit-add" class="dl" data-back="${back||''}"><h2>Tambah jenis buah</h2>
-    <div class="field"><label for="n-name">Nama buah</label><input id="n-name" name="name" type="text" autocomplete="off"></div>
-    <div id="n-err"></div>
-    <div class="row"><button type="button" class="btn ghost" data-act="close">Batal</button><button class="btn pri" type="submit">Tambah</button></div></form>`);
-  setTimeout(()=>{ const i=$('#n-name'); if(i) i.focus(); },30);
+function openFruits(){
+  const st = stock();
+  const list = S.fruits.slice().sort((a,b)=>a.localeCompare(b,'id')).map(f => {
+    const n = S.entries.filter(e => e.fruit===f).length, hid = S.hidden.includes(f), r = st[f] || {stok:0};
+    return `<div class="fr"><div class="fr-t"><strong>${esc(f)}</strong>${hid?'<span class="badge b-koreksi">Disembunyikan</span>':''}<span class="hint">${n} catatan, stok ${kg(r.stok)}</span></div>
+      <div class="row" style="justify-content:flex-start">
+        <button type="button" class="btn sm" data-act="fruit-ren" data-fruit="${esc(f)}">Ganti nama</button>
+        <button type="button" class="btn sm" data-act="fruit-hide" data-fruit="${esc(f)}">${hid?'Tampilkan':'Sembunyikan'}</button>
+        <button type="button" class="btn sm danger" data-act="fruit-del" data-fruit="${esc(f)}" ${n?'aria-disabled="true" title="Sudah dipakai di catatan"':''}>Hapus</button>
+      </div></div>`;
+  }).join('');
+  openDlg(`<div class="dl"><h2>Daftar buah</h2>
+    <p>Tambah, ganti nama, atau sembunyikan buah kapan saja. Buah yang disembunyikan tidak muncul di pilihan Catat, tetapi riwayat dan laporannya tetap ada.</p>
+    <form id="f-fruit-add" class="form">
+      <div class="field"><label for="n-name">Tambah buah baru</label>
+        <div class="row" style="flex-wrap:nowrap"><input id="n-name" name="name" type="text" autocomplete="off" placeholder="Contoh: Markisa"><button class="btn pri" type="submit">Tambah</button></div></div>
+      <div id="n-err"></div>
+    </form>
+    <div class="fl2">${list || '<p class="hint">Belum ada buah. Tambahkan di atas.</p>'}</div>
+    <div class="row"><button class="btn ghost" type="button" data-act="close">Tutup</button></div></div>`);
+}
+function openRename(name){
+  openDlg(`<form id="f-fruit-ren" class="dl" data-fruit="${esc(name)}"><h2>Ganti nama ${esc(name)}</h2>
+    <p>Semua catatan lama ikut memakai nama baru.</p>
+    <div class="field"><label for="r-name">Nama baru</label><input id="r-name" name="name" type="text" autocomplete="off" value="${esc(name)}"></div>
+    <div id="r-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="fruits">Batal</button><button class="btn pri" type="submit">Simpan nama</button></div></form>`);
+  setTimeout(()=>{ const i=$('#r-name'); if(i){ i.focus(); i.select(); } },30);
+}
+function submitRename(form){
+  const old = form.dataset.fruit, nn = normName(new FormData(form).get('name')), err = $('#r-err');
+  if(!nn){ err.innerHTML = '<div class="err" role="alert">Isi nama buah.</div>'; return; }
+  if(nn!==old && S.fruits.some(f => f!==old && f.toLowerCase()===nn.toLowerCase())){ err.innerHTML = '<div class="err" role="alert">Nama itu sudah dipakai buah lain.</div>'; return; }
+  if(nn!==old){
+    S.fruits = S.fruits.map(f => f===old ? nn : f);
+    S.hidden = S.hidden.map(f => f===old ? nn : f);
+    S.entries.forEach(e => { if(e.fruit===old) e.fruit = nn; });
+    if(ui.draft.fruit===old) ui.draft.fruit = nn;
+    if(save()) toast(`Nama diganti menjadi ${nn}`);
+    ui.dirty = true;
+  }
+  openFruits();
 }
 function submitAddFruit(form){
-  const name = cap(String(new FormData(form).get('name')||'').trim().replace(/\s+/g,' '));
+  const name = normName(new FormData(form).get('name'));
   const err = $('#n-err');
   if(!name){ err.innerHTML = '<div class="err" role="alert">Isi nama buah.</div>'; return; }
-  if(S.fruits.some(f=>f.toLowerCase()===name.toLowerCase())){ err.innerHTML = '<div class="err" role="alert">Buah ini sudah ada di daftar.</div>'; return; }
-  S.fruits.push(name); save();
-  const back = form.dataset.back;
-  dlg.close();
-  if(back==='settings'){ openSettings(); return; }
-  ui.draft.fruit = name; render(); toast(`${name} ditambahkan`);
+  const ex = findFruit(name);
+  if(ex){
+    if(S.hidden.includes(ex)){ S.hidden = S.hidden.filter(f => f!==ex); save(); toast(`${ex} ditampilkan kembali`); ui.dirty = true; openFruits(); return; }
+    err.innerHTML = '<div class="err" role="alert">Buah ini sudah ada di daftar.</div>'; return;
+  }
+  S.fruits.push(name); save(); toast(`${name} ditambahkan`);
+  ui.dirty = true; openFruits();
 }
 function openSettings(){
-  const fl = S.fruits.slice().sort((a,b)=>a.localeCompare(b,'id')).map(f=>{
-    const used = S.entries.some(e=>e.fruit===f);
-    return `<div><span>${esc(f)}</span><button type="button" class="btn sm danger" data-act="fruit-del" data-fruit="${esc(f)}" ${used?'aria-disabled="true" title="Sudah dipakai di catatan"':''}>${used?'Dipakai':'Hapus'}</button></div>`;
-  }).join('');
   openDlg(`<div class="dl"><h2>Pengaturan dan cadangan</h2>
     <form id="f-set" class="form">
       <div class="field"><label for="s-user">Nama pencatat default</label><input id="s-user" name="user" type="text" value="${esc(S.settings.user||'')}"></div>
       <div class="field"><label for="s-target">Target waste maksimum per bulan (%), boleh kosong</label><input id="s-target" name="target" type="number" inputmode="decimal" step="any" min="0" value="${esc(S.settings.target)}"></div>
       <button class="btn pri" type="submit">Simpan pengaturan</button>
     </form><hr>
-    <h2 style="font-size:17px">Daftar buah</h2><div class="fl">${fl}</div>
-    <button class="btn" type="button" data-act="add-fruit-settings">Tambah jenis buah</button><hr>
+    <h2 style="font-size:17px">Daftar buah</h2>
+    <p>${activeFruits().length} buah aktif. Tambah, ganti nama, atau sembunyikan sesuai kebutuhan.</p>
+    <button class="btn" type="button" data-act="fruits">Kelola daftar buah</button><hr>
     <h2 style="font-size:17px">Cadangan data</h2>
     <p>Data tersimpan di browser perangkat ini saja. Unduh cadangan secara rutin, dan pindahkan ke perangkat lain lewat Pulihkan.</p>
     <div class="row" style="justify-content:flex-start"><button class="btn" type="button" data-act="export-json">Unduh cadangan</button><button class="btn" type="button" data-act="import-json">Pulihkan dari file</button></div>
@@ -548,8 +629,18 @@ document.addEventListener('click', async ev => {
   else if(a==='month'){ ui.month = addMonths(ui.month, Number(v)); render(); }
   else if(a==='filter'){ ui.filter = v; render(); }
   else if(a==='opname'){ openOpname(b.dataset.fruit); }
-  else if(a==='add-fruit'){ openAddFruit(''); }
-  else if(a==='add-fruit-settings'){ openAddFruit('settings'); }
+  else if(a==='fruits'){ openFruits(); }
+  else if(a==='fruit-ren'){ openRename(b.dataset.fruit); }
+  else if(a==='fruit-hide'){
+    const f = b.dataset.fruit;
+    S.hidden = S.hidden.includes(f) ? S.hidden.filter(x => x!==f) : S.hidden.concat(f);
+    save(); ui.dirty = true; openFruits();
+  }
+  else if(a==='pick-fruit'){
+    const i = $('#f-fruit');
+    if(i){ i.value = b.dataset.fruit; ui.draft.fruit = b.dataset.fruit;
+      document.querySelectorAll('[data-act="pick-fruit"]').forEach(x => x.setAttribute('aria-pressed', x===b ? 'true' : 'false')); }
+  }
   else if(a==='settings'){ openSettings(); }
   else if(a==='close'){ dlg.close(); }
   else if(a==='export-csv'){ exportCsv(); }
@@ -561,8 +652,9 @@ document.addEventListener('click', async ev => {
     if(ok){ S.entries = S.entries.filter(x=>x.id!==e.id); if(save()) toast('Catatan dihapus'); render(); }
   }
   else if(a==='fruit-del'){
-    if(b.getAttribute('aria-disabled')==='true'){ toast('Buah ini sudah dipakai di catatan, jadi tidak bisa dihapus.'); return; }
-    S.fruits = S.fruits.filter(f=>f!==b.dataset.fruit); save(); openSettings(); render();
+    if(b.getAttribute('aria-disabled')==='true'){ toast('Buah ini sudah dipakai di catatan. Sembunyikan saja kalau tidak dipakai lagi.'); return; }
+    S.fruits = S.fruits.filter(f => f!==b.dataset.fruit); S.hidden = S.hidden.filter(f => f!==b.dataset.fruit);
+    save(); ui.dirty = true; openFruits();
   }
   else if(a==='reset'){
     const ok = await ask('Hapus semua data?', 'Semua catatan dan pengaturan di perangkat ini akan dihapus dan tidak bisa dikembalikan, kecuali kamu punya file cadangan.', 'Hapus semua');
@@ -576,6 +668,7 @@ document.addEventListener('submit', ev => {
   if(f.id==='f') submitEntry(f);
   else if(f.id==='f-opname') submitOpname(f);
   else if(f.id==='f-fruit-add') submitAddFruit(f);
+  else if(f.id==='f-fruit-ren') submitRename(f);
   else if(f.id==='f-set') submitSettings(f);
 });
 document.addEventListener('change', ev => {
