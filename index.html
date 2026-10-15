@@ -1,0 +1,1739 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14513B">
+<title>Stok Buah Kapten Juz</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --ink:#10281F; --green:#14513B; --leaf:#2E7D57; --mango:#E9902A;
+  --paper:#F4F6F0; --card:#FFFFFF; --line:#DAE1D6; --muted:#566860;
+  --waste:#A8480F; --wastebg:#FBEBDD; --okbg:#E2F0E6; --danger:#B3261E;
+  --c-masuk:#14513B; --c-produksi:#5A7D2A; --c-eceran:#2F5D7C; --c-waste:#A8480F; --c-koreksi:#5B4B8A;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+h1,h2,h3,p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--mango);outline-offset:2px}
+
+.top{position:sticky;top:0;z-index:5;background:var(--green);color:#F4F6F0;padding:calc(10px + env(safe-area-inset-top)) 16px 10px}
+.top-in{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.top-r{display:flex;align-items:center;gap:10px}
+.chip-s{border:0;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;min-height:32px}
+.chip-s.ok{background:#CFE9D8;color:#0E3B2A}
+.chip-s.mid{background:#FBE3B8;color:#5A3A00}
+.chip-s.bad{background:#F8D2CC;color:#7C1A13}
+.avatar{width:38px;height:38px;border-radius:50%;border:2px solid #CFE3D6;background:var(--mango);color:var(--ink);font-weight:800;cursor:pointer;padding:0}
+.noshell .top,.noshell .tabs{display:none}
+.noshell{padding-bottom:24px}
+main{max-width:720px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.empty{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.empty h2{font-size:20px}
+.empty p{color:var(--muted)}
+
+.btn{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:11px 16px;font-weight:600;cursor:pointer;min-height:44px}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.btn.waste{background:var(--waste);border-color:var(--waste);color:#fff}
+.btn.ghost{background:transparent}
+.btn.sm{padding:6px 12px;min-height:36px;font-size:15px}
+.btn.danger{color:var(--danger);border-color:#E8B9B4}
+.btn[disabled]{opacity:.6;cursor:wait}
+.btn[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;padding:6px 0;color:var(--green);font-weight:600;text-decoration:underline;cursor:pointer;text-align:left}
+
+/* Login */
+.login{max-width:420px;margin:7vh auto 0;display:flex;flex-direction:column;gap:20px}
+.lg-brand{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.lg-brand img{width:64px;height:64px;border-radius:16px}
+.lg-brand h1{font-size:28px;letter-spacing:-.02em}
+.lg-brand p{color:var(--muted)}
+
+/* Stok */
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sum>div{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.sum .lbl{font-size:14px;color:var(--muted)}
+.sum strong{font-size:26px;letter-spacing:-.01em}
+.sum .w strong{color:var(--waste)}
+.fc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
+.fc.neg{border-color:var(--danger)}
+.fc-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fc h3{font-size:20px}
+.stk{font-size:15px;color:var(--muted)}
+.stk strong{font-size:30px;color:var(--ink);letter-spacing:-.02em}
+.warn{font-size:15px;color:var(--danger);font-weight:600}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.mini dt{font-size:13px;color:var(--muted)}
+.mini dd{margin:0;font-weight:700;font-size:15px}
+.mini .w dd{color:var(--waste)}
+
+/* Catat */
+.seg{display:grid;gap:6px;background:#E6EBE2;padding:5px;border-radius:12px}
+.seg button{border:0;background:transparent;border-radius:9px;padding:10px 2px;font-weight:700;font-size:15px;cursor:pointer;min-height:44px;color:var(--ink)}
+.seg button[aria-selected="true"]{color:#fff}
+.seg .seg-masuk[aria-selected="true"]{background:var(--c-masuk)}
+.seg .seg-produksi[aria-selected="true"]{background:var(--c-produksi)}
+.seg .seg-eceran[aria-selected="true"]{background:var(--c-eceran)}
+.seg .seg-waste[aria-selected="true"]{background:var(--c-waste)}
+.form{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:14px;color:var(--muted);font-weight:600}
+input,select,textarea{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;min-height:48px}
+textarea{min-height:76px;resize:vertical}
+.kg{display:flex;align-items:center;gap:10px}
+.kg input{font-size:34px;font-weight:700;text-align:right;letter-spacing:-.02em;min-height:64px}
+.kg span{font-size:22px;font-weight:700;color:var(--muted)}
+.row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.err{background:#FCE9E7;color:#7C1A13;border-radius:10px;padding:10px 14px;font-size:15px}
+.err ul{margin:0;padding-left:18px}
+.hint{font-size:14px;color:var(--muted)}
+
+/* Laporan */
+.mbar{display:flex;gap:8px;align-items:center}
+.mbar input{text-align:center;font-weight:700}
+.mbar .btn{padding:0;width:48px;flex:none;font-size:22px}
+.kpi{display:flex;flex-direction:column;gap:6px}
+.kpi .big{font-size:56px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--waste)}
+.kpi .sub{color:var(--muted)}
+.tag{display:inline-block;align-self:flex-start;border-radius:999px;padding:4px 12px;font-weight:700;font-size:14px}
+.tag.ok{background:var(--okbg);color:var(--green)}
+.tag.bad{background:var(--wastebg);color:var(--waste)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2>div{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}
+.grid2 .lbl{font-size:14px;color:var(--muted)}
+.grid2 strong{font-size:20px}
+.sec h2{font-size:18px;margin-bottom:12px}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-l{display:flex;justify-content:space-between;gap:10px;font-size:15px;margin-bottom:4px}
+.bar-t{height:12px;background:#EDF0EA;border-radius:6px;overflow:hidden}
+.bar-t i{display:block;height:100%;background:var(--waste);border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:14px;padding:6px 4px;border-bottom:1.5px solid var(--line)}
+td{padding:9px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+th.n,td.n{text-align:right;font-variant-numeric:tabular-nums}
+.trend{display:flex;gap:8px;align-items:flex-end;height:150px}
+.trend>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;font-size:13px;color:var(--muted)}
+.trend i{display:block;width:100%;max-width:44px;background:#E3B28B;border-radius:6px 6px 0 0}
+.trend .cur i{background:var(--waste)}
+.trend b{color:var(--ink);font-size:13px}
+
+/* Riwayat */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.chips.wrap{flex-wrap:wrap;overflow:visible}
+.chip{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-weight:600;font-size:15px;cursor:pointer;min-height:40px}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.hist{display:flex;flex-direction:column;gap:10px}
+.he{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.he.pend{border-style:dashed;border-color:var(--mango)}
+.he-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.he-t{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.he-t strong{font-size:17px}
+.he-d{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.he-k{font-weight:800;font-size:18px;white-space:nowrap}
+.badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;color:#fff}
+.b-masuk{background:var(--c-masuk)}.b-produksi{background:var(--c-produksi)}.b-eceran{background:var(--c-eceran)}.b-waste{background:var(--c-waste)}.b-koreksi{background:var(--c-koreksi)}
+.b-pend{background:#8A5A00}
+.r-manager{background:var(--c-masuk)}.r-admin{background:var(--c-eceran)}.r-produksi{background:var(--c-produksi)}.r-kasir{background:var(--c-koreksi)}
+.x{border:0;background:transparent;color:var(--danger);font-weight:700;font-size:14px;padding:8px;cursor:pointer;min-height:40px}
+
+/* Staf */
+.sc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.sc.off{background:#EEF0EA}
+.sc-t{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sc-t strong{font-size:18px}
+.tag.off{background:#E3E5DF;color:#3B4A42}
+.perm td:first-child{white-space:nowrap;font-weight:700}
+
+/* Daftar buah */
+.fr{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.fr-t{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.fr-t .hint{flex-basis:100%}
+.fl2{display:flex;flex-direction:column;gap:10px}
+
+/* Bahan, hasil produksi */
+.fc.low{border-color:var(--mango);background:#FFF8EC}
+.card.low{border-color:var(--mango);background:#FFF8EC;display:block;width:100%;font:inherit;color:inherit}
+.yield{background:#E9F3EC;border-radius:10px;padding:10px 14px;font-size:15px;color:var(--green)}
+.yield.bad{background:#FCE9E7;color:#7C1A13}
+/* Nav, dialog, toast */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;border:0;background:none;padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;min-height:60px}
+.tabs button[aria-current="page"]{color:var(--green)}
+.tabs button[aria-current="page"] svg{stroke:var(--green)}
+.tabs svg{width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+dialog{border:0;border-radius:18px;padding:0;width:min(520px,calc(100% - 24px));max-height:calc(100% - 24px);color:var(--ink)}
+dialog::backdrop{background:rgba(16,40,31,.55)}
+.dl{padding:20px;display:flex;flex-direction:column;gap:14px}
+.dl h2{font-size:20px}
+.dl p{color:var(--muted)}
+.dl hr{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
+.cred{background:#F1EBDA;border-radius:10px;padding:12px 14px;font-size:17px;display:flex;flex-direction:column;gap:4px;user-select:all;word-break:break-all}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:12px;padding:12px 18px;font-weight:600;max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+#toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+@media (max-width:380px){.mini{grid-template-columns:1fr 1fr}.kpi .big{font-size:46px}.top h1{font-size:19px}}
+@media (max-width:430px){.tabs button{font-size:11.5px}}
+</style>
+</head>
+<body class="noshell">
+<header class="top">
+  <div class="top-in">
+    <h1 id="ttl">Stok buah</h1>
+    <div class="top-r">
+      <button id="sync" class="chip-s ok" data-act="sync" type="button">Tersinkron</button>
+      <button id="acct" class="avatar" data-act="account" type="button" aria-label="Akun saya">?</button>
+    </div>
+  </div>
+</header>
+<main id="app"></main>
+<nav class="tabs" id="nav" aria-label="Menu utama"></nav>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   Konfigurasi (kunci publishable memang aman ada di aplikasi web)
+   ===================================================================== */
+const SB_URL = 'https://ydkuivsjbmlyoztdnrmj.supabase.co';
+const SB_KEY = 'sb_publishable_axDReuYImLoDhay1uONm3A_gz2iJHoA';
+const FN_URL = SB_URL + '/functions/v1/staff-admin';
+const POLL_MS = 30000;
+
+const TYPES = {
+  masuk:{label:'Masuk'}, produksi:{label:'Ke produksi'}, eceran:{label:'Eceran'},
+  waste:{label:'Waste'}, koreksi:{label:'Koreksi opname'}
+};
+const CATS = {
+  busuk:'Busuk atau terlalu matang', rusak:'Memar atau rusak', kupas:'Sisa kupas',
+  jatuh:'Jatuh atau tumpah', lainnya:'Lainnya'
+};
+const STAGES = {gudang:'Gudang', produksi:'Produksi', eceran:'Eceran'};
+const ROLE = {manager:'Manager', admin:'Admin', produksi:'Produksi', kasir:'Kasir'};
+const ROLE_TYPES = {
+  manager:['masuk','produksi','eceran','waste'], admin:['masuk','produksi','eceran','waste'],
+  produksi:['produksi','waste'], kasir:['eceran','waste']
+};
+const STYPES = {
+  masuk:{label:'Masuk'}, pakai:{label:'Dipakai'}, rusak:{label:'Rusak'}, koreksi:{label:'Koreksi opname'}
+};
+const ROLE_STYPES = {
+  manager:['masuk','pakai','rusak'], admin:['masuk','pakai','rusak'],
+  produksi:['pakai','rusak'], kasir:['pakai','rusak']
+};
+const SBADGE = {masuk:'masuk', pakai:'produksi', rusak:'waste', koreksi:'koreksi'};
+const UNITS = ['pcs','pak','roll','dus','lusin','kg','liter'];
+const FRIENDLY = {
+  '23505':'Data dengan nama itu sudah ada.',
+  '23503':'Data ini masih dipakai di catatan lain.',
+  '42501':'Kamu tidak punya izin untuk tindakan ini.'
+};
+
+/* =====================================================================
+   Util
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const app = $('#app'), dlg = $('#dlg'), toastEl = $('#toast');
+const pad = n => String(n).padStart(2,'0');
+const todayStr = () => { const d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+const thisMonth = () => todayStr().slice(0,7);
+const addMonths = (m,n) => { const [y,mo] = m.split('-').map(Number); const d = new Date(y,mo-1+n,1); return d.getFullYear()+'-'+pad(d.getMonth()+1); };
+const nf = new Intl.NumberFormat('id-ID',{maximumFractionDigits:2});
+const nf1 = new Intl.NumberFormat('id-ID',{maximumFractionDigits:1});
+const kg = n => nf.format(Math.round(n*100)/100)+' kg';
+const skg = n => (n>0?'+':n<0?'\u2212':'')+nf.format(Math.abs(Math.round(n*100)/100))+' kg';
+const pct = n => nf1.format(Math.round(n*10)/10)+'%';
+const rp = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+const dateLabel = d => new Date(d+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+const monthLabel = m => new Date(m+'-01T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+const monthShort = m => new Date(m+'-01T00:00:00').toLocaleDateString('id-ID',{month:'short'});
+const timeLabel = ms => new Date(ms).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+const normName = s => cap(String(s==null?'':s).trim().replace(/\s+/g,' '));
+const initials = n => String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
+const uuid = () => {
+  if(crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6]&15)|64; b[8] = (b[8]&63)|128;
+  const h = Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+};
+function genPw(){
+  const a = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const r = crypto.getRandomValues(new Uint32Array(10));
+  return Array.from(r,x=>a[x%a.length]).join('');
+}
+function lev(a,b){
+  const m=a.length, n=b.length, d=[];
+  for(let i=0;i<=m;i++) d[i]=[i];
+  for(let j=1;j<=n;j++) d[0][j]=j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+    d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[m][n];
+}
+function similar(a,b){ a=a.toLowerCase(); b=b.toLowerCase(); return Math.min(a.length,b.length)>=4 && lev(a,b)<=1; }
+
+const LS = {
+  get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+function toast(msg){
+  toastEl.textContent = msg; toastEl.classList.add('on');
+  clearTimeout(toast.t); toast.t = setTimeout(()=>toastEl.classList.remove('on'), 3200);
+}
+
+/* =====================================================================
+   State
+   ===================================================================== */
+class NetErr extends Error { constructor(m){ super(m||'offline'); this.net = true; } }
+
+const st = {
+  session:null, me:null, profiles:[], fruits:[], entries:new Map(), settings:{waste_target:null},
+  cursor:0, sCursor:0, supplies:[], sEntries:new Map(), migrated:true, lastSync:0, queue:[], rejected:[],
+  syncing:false, again:false, netFail:false, ready:false, ver:0
+};
+const ui = {tab:'stok', type:'masuk', month:thisMonth(), filter:'semua', draft:{date:todayStr(), fruit:''}, dirty:false, sub:'stok', stype:'masuk', sdraft:{date:todayStr(), item:''}};
+
+const uidNow = () => st.session ? st.session.user.id : '';
+const ck = () => 'sb.cache.'+uidNow(), qk = () => 'sb.queue.'+uidNow(), rk = () => 'sb.rej.'+uidNow();
+function saveCache(){
+  LS.set(ck(), {me:st.me, profiles:st.profiles, fruits:st.fruits, settings:st.settings, cursor:st.cursor, lastSync:st.lastSync, entries:Array.from(st.entries.values()), supplies:st.supplies, sCursor:st.sCursor, migrated:st.migrated, sEntries:Array.from(st.sEntries.values())});
+}
+function saveQueue(){ LS.set(qk(), st.queue); LS.set(rk(), st.rejected); st.ver++; }
+function bump(){ st.ver++; }
+function loadLocal(){
+  const c = LS.get(ck(), null);
+  if(c){
+    st.me = c.me||null; st.profiles = c.profiles||[]; st.fruits = c.fruits||[];
+    st.settings = c.settings||{waste_target:null}; st.cursor = c.cursor||0; st.lastSync = c.lastSync||0;
+    st.entries = new Map((c.entries||[]).map(e=>[e.id,e]));
+    st.supplies = c.supplies||[]; st.sCursor = c.sCursor||0; st.migrated = c.migrated!==false;
+    st.sEntries = new Map((c.sEntries||[]).map(e=>[e.id,e]));
+  }
+  st.queue = LS.get(qk(), []); st.rejected = LS.get(rk(), []);
+  bump();
+  return !!c;
+}
+
+/* ---------- Hak akses ---------- */
+const myRole = () => st.me ? st.me.role : null;
+const isMgr = () => myRole()==='manager';
+const canManage = () => myRole()==='manager' || myRole()==='admin';
+const allowedTypes = () => ROLE_TYPES[myRole()] || [];
+const canDelete = e => !!st.me && (isMgr() || (e.created_by===st.me.id && Date.now()-Date.parse(e.created_at) < 86400000));
+const profName = id => { const p = st.profiles.find(x=>x.id===id); return p ? p.full_name : '(staf lama)'; };
+const isOffline = () => !navigator.onLine || st.netFail;
+
+/* =====================================================================
+   Auth dan API
+   ===================================================================== */
+function setSession(j){
+  st.session = {
+    access_token:j.access_token, refresh_token:j.refresh_token,
+    expires_at:j.expires_at || Math.floor(Date.now()/1000)+(j.expires_in||3600),
+    user:{id:j.user.id, email:j.user.email}
+  };
+  LS.set('sb.session', st.session);
+}
+let refreshP = null;
+function refreshSession(){
+  if(refreshP) return refreshP;
+  refreshP = (async () => {
+    const rt = st.session && st.session.refresh_token;
+    if(!rt){ const e = new Error('Sesi berakhir'); e.auth = true; throw e; }
+    let res;
+    try{
+      res = await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token', {method:'POST', headers:{apikey:SB_KEY,'Content-Type':'application/json'}, body:JSON.stringify({refresh_token:rt})});
+    }catch(e){ throw new NetErr(); }
+    if(res.status>=500) throw new NetErr('server');
+    if(!res.ok){ const e = new Error('Sesi berakhir'); e.auth = true; throw e; }
+    setSession(await res.json());
+  })().finally(()=>{ refreshP = null; });
+  return refreshP;
+}
+async function api(path, o){
+  o = o || {};
+  if(!st.session){ const e = new Error('Belum login'); e.auth = true; throw e; }
+  if(st.session.expires_at - Date.now()/1000 < 60) await refreshSession();
+  for(let attempt=0; attempt<2; attempt++){
+    const h = Object.assign({apikey:SB_KEY, Authorization:'Bearer '+st.session.access_token}, o.headers||{});
+    if(o.body!==undefined) h['Content-Type'] = 'application/json';
+    let res;
+    try{ res = await fetch(SB_URL+path, {method:o.method||'GET', headers:h, body:o.body!==undefined?JSON.stringify(o.body):undefined}); }
+    catch(e){ throw new NetErr(); }
+    if(res.status===401 && attempt===0){ await refreshSession(); continue; }
+    return res;
+  }
+}
+async function failure(res){
+  let j = {}; try{ j = await res.json(); }catch(e){}
+  let msg = j.message || j.msg || j.error_description || j.error || ('Kesalahan '+res.status);
+  if(j.code && FRIENDLY[j.code]) msg = FRIENDLY[j.code];
+  const e = new Error(msg); e.status = res.status; e.code = j.code; return e;
+}
+async function jget(path){ const r = await api(path); if(!r.ok) throw await failure(r); return r.json(); }
+async function patchRow(path, body){
+  const r = await api(path, {method:'PATCH', headers:{Prefer:'return=representation'}, body});
+  if(!r.ok) throw await failure(r);
+  const rows = await r.json();
+  if(!rows.length){ const e = new Error(FRIENDLY['42501']); e.status = 403; throw e; }
+  return rows;
+}
+async function staffCall(payload){
+  if(st.session.expires_at - Date.now()/1000 < 60) await refreshSession();
+  let res;
+  try{
+    res = await fetch(FN_URL, {method:'POST', headers:{apikey:SB_KEY, Authorization:'Bearer '+st.session.access_token, 'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  }catch(e){ throw new NetErr(); }
+  let j = {}; try{ j = await res.json(); }catch(e){}
+  if(!res.ok){
+    let msg = j.error || j.message || ('Kesalahan '+res.status);
+    if(res.status===404) msg = 'Fungsi pengelola staf belum dipasang di Supabase.';
+    if(res.status===401 && !j.error) msg = 'Fungsi staf menolak sesi ini. Matikan Verify JWT pada fungsi staff-admin, atau login ulang.';
+    const e = new Error(msg); e.status = res.status; throw e;
+  }
+  return j;
+}
+function needOnline(){ if(isOffline()){ toast('Butuh internet untuk tindakan ini.'); return false; } return true; }
+async function mgmt(fn, okMsg, errSel){
+  if(!needOnline()) return false;
+  try{ await fn(); if(okMsg) toast(okMsg); return true; }
+  catch(e){
+    if(e.auth){ forceLogin('Sesi berakhir. Silakan login lagi.'); return false; }
+    const msg = e.net ? 'Tidak ada koneksi. Coba lagi.' : (e.message || 'Terjadi kesalahan.');
+    const box = errSel && $(errSel);
+    if(box) box.innerHTML = `<div class="err" role="alert">${esc(msg)}</div>`; else toast(msg);
+    return false;
+  }
+}
+
+/* =====================================================================
+   Data turunan (server + antrean yang belum terkirim)
+   ===================================================================== */
+let memo = {v:-1};
+function derived(){
+  if(memo.v===st.ver) return memo;
+  const fr = st.fruits.slice(), fids = new Set(fr.map(f=>f.id));
+  const sp = st.supplies.slice(), sids = new Set(sp.map(s=>s.id));
+  const em = new Map(st.entries), sem = new Map(st.sEntries), del = new Set(), sdel = new Set();
+  st.queue.forEach(op => {
+    if(op.k==='fruit' && !fids.has(op.row.id)){ fids.add(op.row.id); fr.push({id:op.row.id, name:op.row.name, hidden:false, _p:true}); }
+    if(op.k==='supply' && !sids.has(op.row.id)){ sids.add(op.row.id); sp.push({id:op.row.id, name:op.row.name, unit:op.row.unit, min_stock:op.row.min_stock==null?null:op.row.min_stock, hidden:false, _p:true}); }
+    if(op.k==='entry') op.rows.forEach(r => { if(!em.has(r.id)) em.set(r.id, Object.assign({}, r, {created_at:new Date(op.ts).toISOString(), _p:true})); });
+    if(op.k==='sentry') op.rows.forEach(r => { if(!sem.has(r.id)) sem.set(r.id, Object.assign({}, r, {created_at:new Date(op.ts).toISOString(), _p:true})); });
+    if(op.k==='del') del.add(op.id);
+    if(op.k==='sdel') sdel.add(op.id);
+  });
+  const mark = (e, set) => (set.has(e.id) && !e.deleted_at) ? Object.assign({}, e, {deleted_at:new Date().toISOString()}) : e;
+  const all = Array.from(em.values()).map(e => mark(e, del));
+  const sAll = Array.from(sem.values()).map(e => mark(e, sdel));
+  const fmap = {}; fr.forEach(f => { fmap[f.id] = f; });
+  const smap = {}; sp.forEach(s => { smap[s.id] = s; });
+  memo = {v:st.ver, all, live:all.filter(e=>!e.deleted_at), fruits:fr, fmap, sAll, sLive:sAll.filter(e=>!e.deleted_at), supplies:sp, smap};
+  return memo;
+}
+const fruitName = id => { const f = derived().fmap[id]; return f ? f.name : '(buah dihapus)'; };
+const findFruit = name => { const l = name.toLowerCase(); return derived().fruits.find(f => f.name.trim().toLowerCase()===l) || null; };
+
+function stock(){
+  const d = derived(), m = {};
+  const get = id => m[id] || (m[id] = {masuk:0,produksi:0,eceran:0,waste:0,koreksi:0});
+  d.fruits.forEach(f => get(f.id));
+  d.live.forEach(e => { get(e.fruit_id)[e.type] += Number(e.kg); });
+  Object.values(m).forEach(r => { r.stok = Math.round((r.masuk + r.koreksi - r.produksi - r.eceran - r.waste)*100)/100; });
+  return m;
+}
+function monthStats(m){
+  const r = {masuk:0,produksi:0,eceran:0,waste:0,koreksi:0,kupas:0,cats:{},stages:{},fruits:{},yield:{},kotor:0,bersih:0,noNet:0};
+  derived().live.filter(e => e.entry_date.startsWith(m)).forEach(e => {
+    const k = Number(e.kg); r[e.type] += k;
+    const name = fruitName(e.fruit_id);
+    const f = r.fruits[name] || (r.fruits[name] = {masuk:0,waste:0});
+    if(e.type==='masuk') f.masuk += k;
+    if(e.type==='produksi'){
+      if(e.kg_net!=null){
+        // Sisa kupas = berat kotor dikurangi berat bersih. Otomatis dihitung sebagai waste tahap produksi.
+        const net = Number(e.kg_net), peel = Math.max(0, k-net);
+        const y = r.yield[name] || (r.yield[name] = {kotor:0,bersih:0});
+        y.kotor += k; y.bersih += net; r.kotor += k; r.bersih += net;
+        r.waste += peel; r.kupas += peel; f.waste += peel;
+        r.cats.kupas = (r.cats.kupas||0) + peel;
+        r.stages.produksi = (r.stages.produksi||0) + peel;
+      } else r.noNet += k;
+    }
+    if(e.type==='waste'){
+      f.waste += k;
+      r.cats[e.category] = (r.cats[e.category]||0) + k;
+      r.stages[e.stage] = (r.stages[e.stage]||0) + k;
+      if(e.category==='kupas') r.kupas += k;
+    }
+  });
+  r.pct = r.masuk>0 ? r.waste/r.masuk*100 : null;
+  r.pctNet = r.masuk>0 ? (r.waste-r.kupas)/r.masuk*100 : null;
+  return r;
+}
+function detail(e){
+  const p = [];
+  if(e.type==='masuk'){ if(e.price) p.push(rp(e.price)+'/kg'); if(e.origin) p.push(e.origin); }
+  if(e.type==='produksi'){ if(e.kg_net!=null){ const n = Number(e.kg_net), g = Number(e.kg); p.push('bersih '+kg(n)+', hasil '+pct(g>0?n/g*100:0)); } if(e.menu) p.push(e.menu); }
+  if(e.type==='eceran' && e.price) p.push(rp(e.price)+'/kg');
+  if(e.type==='waste'){ p.push(CATS[e.category]||e.category); p.push('tahap '+(STAGES[e.stage]||e.stage).toLowerCase()); }
+  if(e.note) p.push(e.note);
+  p.push('oleh '+profName(e.created_by));
+  return p.join(', ');
+}
+
+/* =====================================================================
+   Antrean pengiriman (offline) dan sinkronisasi
+   ===================================================================== */
+const INS_KEYS = ['id','entry_date','type','fruit_id','kg','price','origin','menu','category','stage','note','created_by'];
+const insPayload = r => { const o = {}; INS_KEYS.forEach(k => { o[k] = r[k]===undefined ? null : r[k]; }); if(r.kg_net!=null) o.kg_net = r.kg_net; return o; };
+const SINS_KEYS = ['id','entry_date','type','supply_id','qty','price','note','created_by'];
+const sinsPayload = r => { const o = {}; SINS_KEYS.forEach(k => { o[k] = r[k]===undefined ? null : r[k]; }); return o; };
+
+function enqueue(op){ op.ts = Date.now(); st.queue.push(op); saveQueue(); }
+
+function remapFruit(oldId, newId){
+  st.queue.forEach(o => { if(o.k==='entry') o.rows.forEach(r => { if(r.fruit_id===oldId) r.fruit_id = newId; }); });
+}
+async function sendOp(op){
+  if(op.k==='fruit'){
+    const r = await api('/rest/v1/fruits?on_conflict=id', {method:'POST', headers:{Prefer:'resolution=ignore-duplicates,return=minimal'}, body:{id:op.row.id, name:op.row.name}});
+    if(r.ok) return;
+    const e = await failure(r);
+    if(r.status===409 || e.code==='23505'){
+      const list = await jget('/rest/v1/fruits?select=id,name');
+      const hit = list.find(f => f.name.trim().toLowerCase()===op.row.name.trim().toLowerCase());
+      if(hit){ remapFruit(op.row.id, hit.id); return; }
+    }
+    throw e;
+  }
+  if(op.k==='entry'){
+    const r = await api('/rest/v1/entries?on_conflict=id', {method:'POST', headers:{Prefer:'resolution=ignore-duplicates,return=minimal'}, body:op.rows.map(insPayload)});
+    if(!r.ok) throw await failure(r);
+    return;
+  }
+  if(op.k==='del'){
+    await patchRow('/rest/v1/entries?id=eq.'+encodeURIComponent(op.id), {deleted_at:op.at});
+    return;
+  }
+  if(op.k==='supply'){
+    const r = await api('/rest/v1/supplies?on_conflict=id', {method:'POST', headers:{Prefer:'resolution=ignore-duplicates,return=minimal'}, body:{id:op.row.id, name:op.row.name, unit:op.row.unit, min_stock:op.row.min_stock==null?null:op.row.min_stock}});
+    if(r.ok) return;
+    const e = await failure(r);
+    if(r.status===409 || e.code==='23505'){
+      const list = await jget('/rest/v1/supplies?select=id,name');
+      const hit = list.find(s => s.name.trim().toLowerCase()===op.row.name.trim().toLowerCase());
+      if(hit){ st.queue.forEach(o => { if(o.k==='sentry') o.rows.forEach(x => { if(x.supply_id===op.row.id) x.supply_id = hit.id; }); }); return; }
+    }
+    throw e;
+  }
+  if(op.k==='sentry'){
+    const r = await api('/rest/v1/supply_entries?on_conflict=id', {method:'POST', headers:{Prefer:'resolution=ignore-duplicates,return=minimal'}, body:op.rows.map(sinsPayload)});
+    if(!r.ok) throw await failure(r);
+    return;
+  }
+  if(op.k==='sdel'){
+    await patchRow('/rest/v1/supply_entries?id=eq.'+encodeURIComponent(op.id), {deleted_at:op.at});
+    return;
+  }
+}
+function describeOp(op){
+  if(op.k==='fruit') return 'Buah baru '+op.row.name;
+  if(op.k==='supply') return 'Bahan baru '+op.row.name;
+  if(op.k==='del' || op.k==='sdel') return 'Hapus satu catatan';
+  if(op.k==='sentry'){ const r = op.rows[0]; return STYPES[r.type].label+' '+fq(Number(r.qty),sUnit(r.supply_id))+' '+sName(r.supply_id); }
+  if(op.rows.length>1) return op.rows.length+' catatan impor';
+  const r = op.rows[0]; return TYPES[r.type].label+' '+kg(Number(r.kg))+' '+fruitName(r.fruit_id);
+}
+let flushing = false;
+async function flush(){
+  if(flushing || !st.session) return;
+  flushing = true;
+  try{
+    while(st.queue.length){
+      const op = st.queue[0];
+      try{ await sendOp(op); st.queue.shift(); saveQueue(); }
+      catch(e){
+        if(e.net || e.auth || e.status>=500 || e.status===429 || e.status===408) throw e;
+        st.rejected.push({desc:describeOp(op), msg:e.message, at:Date.now()});
+        st.queue.shift(); saveQueue();
+        toast('Satu catatan ditolak server. Ketuk status di atas untuk melihat.');
+      }
+    }
+  } finally { flushing = false; }
+}
+async function pull(){
+  const uid = st.session.user.id;
+  const [me, profiles, fruits, settings] = await Promise.all([
+    jget('/rest/v1/profiles?select=id,email,full_name,role,active&id=eq.'+uid),
+    jget('/rest/v1/profiles?select=id,email,full_name,role,active&order=full_name.asc'),
+    jget('/rest/v1/fruits?select=id,name,hidden&order=name.asc'),
+    jget('/rest/v1/settings?select=waste_target&id=eq.1')
+  ]);
+  const from = st.cursor ? new Date(st.cursor-300000).toISOString() : null;
+  let off = 0, maxMs = st.cursor||0;
+  for(;;){
+    let p = '/rest/v1/entries?select=*&order=updated_at.asc,id.asc&limit=1000&offset='+off;
+    if(from) p += '&updated_at=gte.'+encodeURIComponent(from);
+    const rows = await jget(p);
+    rows.forEach(r => { st.entries.set(r.id, r); const ms = Date.parse(r.updated_at); if(ms>maxMs) maxMs = ms; });
+    if(rows.length<1000) break;
+    off += 1000;
+  }
+  // Bahan dan kemasan (butuh 3-update.sql di database)
+  try{
+    const sups = await jget('/rest/v1/supplies?select=id,name,unit,min_stock,hidden&order=name.asc');
+    const sfrom = st.sCursor ? new Date(st.sCursor-300000).toISOString() : null;
+    let soff = 0, smax = st.sCursor||0;
+    for(;;){
+      let sp = '/rest/v1/supply_entries?select=*&order=updated_at.asc,id.asc&limit=1000&offset='+soff;
+      if(sfrom) sp += '&updated_at=gte.'+encodeURIComponent(sfrom);
+      const srows = await jget(sp);
+      srows.forEach(r => { st.sEntries.set(r.id, r); const ms = Date.parse(r.updated_at); if(ms>smax) smax = ms; });
+      if(srows.length<1000) break;
+      soff += 1000;
+    }
+    st.supplies = sups; st.sCursor = smax; st.migrated = true;
+  }catch(e){
+    if(e.net || e.auth) throw e;
+    if(e.status===404 || e.status===400 || e.code==='PGRST205' || e.code==='42P01') st.migrated = false;
+    else throw e;
+  }
+  st.cursor = maxMs;
+  st.me = me[0] || null; st.profiles = profiles; st.fruits = fruits;
+  st.settings = settings[0] || {waste_target:null};
+  st.lastSync = Date.now();
+  saveCache(); bump();
+}
+async function sync(manual){
+  if(!st.session) return;
+  if(st.syncing){ st.again = true; return; }
+  if(!navigator.onLine){ updateHeader(); if(manual) toast('Sedang offline. Catatan terkirim otomatis saat sinyal kembali.'); return; }
+  st.syncing = true; updateHeader();
+  try{
+    await flush();
+    await pull();
+    st.netFail = false;
+    afterSync();
+    if(manual) toast('Data sudah terbaru');
+  }catch(e){
+    if(e.auth) forceLogin('Sesi berakhir. Silakan login lagi.');
+    else if(e.net) st.netFail = true;
+    else if(manual) toast('Gagal sinkron: '+e.message);
+  }finally{
+    st.syncing = false; updateHeader();
+    if(st.again){ st.again = false; setTimeout(()=>sync(), 300); }
+  }
+}
+function afterSync(){
+  if(!st.ready) return;
+  if(!st.me || !st.me.active){ renderBlocked(); return; }
+  updateNav(); updateHeader();
+  if(ui.tab==='catat' || (ui.tab==='bahan' && ui.sub==='catat')) return;
+  const y = window.scrollY; keepForm(render); window.scrollTo(0,y);
+}
+
+/* =====================================================================
+   Dialog
+   ===================================================================== */
+function openDlg(html){
+  if(dlg.open) dlg.close();
+  dlg.onclose = null; dlg.returnValue = '';
+  dlg.innerHTML = html; dlg.showModal();
+}
+function ask(title, body, okLabel){
+  return new Promise(res => {
+    openDlg(`<form method="dialog" class="dl"><h2>${esc(title)}</h2><p>${esc(body)}</p>
+      <div class="row"><button class="btn ghost" value="no">Batal</button><button class="btn pri" value="yes" autofocus>${esc(okLabel||'Ya, lanjut')}</button></div></form>`);
+    dlg.onclose = () => res(dlg.returnValue==='yes');
+  });
+}
+dlg.addEventListener('click', e => { if(e.target===dlg) dlg.close(); });
+dlg.addEventListener('close', () => { if(ui.dirty){ ui.dirty = false; keepForm(render); } });
+
+/* =====================================================================
+   Layar: login, memuat, diblokir
+   ===================================================================== */
+function setShell(on){ document.body.classList.toggle('noshell', !on); }
+function showLogin(msg){
+  if(dlg.open) dlg.close();
+  setShell(false);
+  app.innerHTML = `<section class="login">
+    <div class="lg-brand"><img src="icon.svg" alt=""><h1>Stok Buah Kapten Juz</h1><p>Masuk dengan akun yang dibuat manager.</p></div>
+    <form id="f-login" class="card form" novalidate>
+      <div class="field"><label for="l-email">Email</label><input id="l-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off"></div>
+      <div class="field"><label for="l-pw">Kata sandi</label><input id="l-pw" name="password" type="password" autocomplete="current-password"></div>
+      <div id="l-err">${msg?`<div class="err" role="alert">${esc(msg)}</div>`:''}</div>
+      <button class="btn pri" type="submit">Masuk</button>
+      <p class="hint">Belum punya akun? Minta manager menambahkannya.</p>
+    </form></section>`;
+}
+function showLoading(){
+  setShell(false);
+  app.innerHTML = `<section class="card empty"><h2>Memuat data</h2><p>Mengambil data terbaru dari server.</p></section>`;
+}
+function showFatal(msg){
+  setShell(false);
+  app.innerHTML = `<section class="card empty"><h2>Belum bisa memuat</h2><p>${esc(msg)}</p>
+    <div class="row" style="justify-content:flex-start"><button class="btn pri" data-act="retry">Coba lagi</button><button class="btn" data-act="logout">Keluar</button></div></section>`;
+}
+function renderBlocked(msg){
+  setShell(false);
+  const text = msg || 'Akunmu dinonaktifkan atau belum terdaftar sebagai staf. Hubungi manager.';
+  app.innerHTML = `<section class="card empty"><h2>Akun belum aktif</h2><p>${esc(text)}</p>
+    <div class="row" style="justify-content:flex-start"><button class="btn pri" data-act="retry">Cek lagi</button><button class="btn" data-act="logout">Keluar</button></div></section>`;
+}
+function forceLogin(msg){
+  LS.del('sb.session'); st.session = null; st.ready = false;
+  showLogin(msg);
+}
+
+/* =====================================================================
+   Tampilan: Stok
+   ===================================================================== */
+function viewStok(){
+  const d = derived();
+  if(!d.live.length){
+    const can = allowedTypes().length;
+    return `<section class="card empty"><h2>Belum ada catatan</h2>
+      <p>Stok tiap buah dihitung otomatis dari catatan masuk, keluar, dan waste.</p>
+      ${can?'<button class="btn pri" data-act="tab" data-v="catat">Mulai mencatat</button>':''}</section>`;
+  }
+  const s = stock();
+  const list = d.fruits.slice().sort((a,b)=>a.name.localeCompare(b.name,'id'));
+  const total = list.reduce((t,f)=>t+Math.max(0,s[f.id].stok),0);
+  const ms = monthStats(thisMonth());
+  const cards = list.map(f => {
+    const r = s[f.id], neg = r.stok < 0;
+    if(f.hidden && r.stok===0) return '';
+    return `<article class="fc ${neg?'neg':''}">
+      <div class="fc-h"><h3>${esc(f.name)}</h3>${canManage()?`<button class="btn sm" data-act="opname" data-fid="${esc(f.id)}">Hitung fisik</button>`:''}</div>
+      <p class="stk"><strong>${kg(r.stok)}</strong> di gudang</p>
+      ${neg?'<p class="warn">Stok minus. Ada catatan keluar yang belum punya catatan masuk.</p>':''}
+      <dl class="mini">
+        <div><dt>Masuk</dt><dd>${kg(r.masuk)}</dd></div>
+        <div><dt>Produksi</dt><dd>${kg(r.produksi)}</dd></div>
+        <div><dt>Eceran</dt><dd>${kg(r.eceran)}</dd></div>
+        <div class="w"><dt>Waste</dt><dd>${kg(r.waste)}</dd></div>
+      </dl></article>`;
+  }).join('');
+  return `<section class="sum">
+      <div><span class="lbl">Total stok sekarang</span><strong>${kg(total)}</strong></div>
+      <div class="w"><span class="lbl">Waste ${esc(monthLabel(thisMonth()))}</span><strong>${ms.pct==null?'\u2013':pct(ms.pct)}</strong></div>
+    </section>${lowBox()}${cards}${canManage()?'<button class="btn" data-act="fruits">Kelola daftar buah</button>':''}`;
+}
+
+/* =====================================================================
+   Tampilan: Catat
+   ===================================================================== */
+function lowBox(){
+  const l = lowSupplies(); if(!l.length) return '';
+  return `<button type="button" class="card low" data-act="goto-bahan" style="text-align:left;cursor:pointer"><strong>${l.length} bahan hampir habis</strong><br><span class="hint">${esc(l.slice(0,3).map(s=>s.name).join(', '))}${l.length>3?', dan lainnya':''}. Ketuk untuk melihat.</span></button>`;
+}
+function quickFruits(){
+  const d = derived(), act = d.fruits.filter(f=>!f.hidden).map(f=>f.name), out = [];
+  d.live.slice().sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).forEach(e => {
+    const n = fruitName(e.fruit_id);
+    if(out.length<8 && act.includes(n) && !out.includes(n)) out.push(n);
+  });
+  act.slice().sort((a,b)=>a.localeCompare(b,'id')).forEach(n => { if(out.length<8 && !out.includes(n)) out.push(n); });
+  return out;
+}
+function viewCatat(){
+  const types = allowedTypes();
+  if(!types.length) return `<section class="card empty"><h2>Perananmu belum bisa mencatat</h2><p>Hubungi manager untuk mengatur perananmu.</p></section>`;
+  if(!types.includes(ui.type)) ui.type = types[0];
+  const t = ui.type, d = ui.draft;
+  const opts = derived().fruits.filter(f=>!f.hidden).sort((a,b)=>a.name.localeCompare(b.name,'id')).map(f=>`<option value="${esc(f.name)}"></option>`).join('');
+  const quick = quickFruits().map(n=>`<button type="button" class="chip" data-act="pick-fruit" data-fruit="${esc(n)}" aria-pressed="${n===d.fruit}">${esc(n)}</button>`).join('');
+  let extra = '';
+  if(t==='masuk') extra = `
+    <div class="field"><label for="f-price">Harga beli per kg (Rp), boleh kosong</label><input id="f-price" name="price" type="number" inputmode="numeric" min="0" step="any"></div>
+    <div class="field"><label for="f-origin">Asal atau supplier, boleh kosong</label><input id="f-origin" name="origin" type="text" autocomplete="off"></div>`;
+  if(t==='produksi') extra = `
+    <div class="field"><label for="f-net">Berat setelah dikupas atau bersih (kg)</label>
+      <div class="kg"><input id="f-net" name="net" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><span>kg</span></div>
+      <div id="yield-box" class="yield" aria-live="polite">Isi berat kotor dan berat bersih untuk melihat persentase hasil.</div></div>
+    <div class="field"><label for="f-menu">Untuk menu olahan, boleh kosong</label><input id="f-menu" name="menu" type="text" autocomplete="off"></div>`;
+  if(t==='eceran') extra = `
+    <div class="field"><label for="f-price">Harga jual per kg (Rp), boleh kosong</label><input id="f-price" name="price" type="number" inputmode="numeric" min="0" step="any"></div>`;
+  if(t==='waste') extra = `
+    <p class="hint">Sisa kupas tidak dicatat di sini. Hitungnya otomatis dari catatan produksi (berat kotor dikurangi berat bersih).</p>
+    <div class="field"><label for="f-cat">Kategori waste</label><select id="f-cat" name="cat"><option value="">Pilih kategori</option>${Object.entries(CATS).filter(([k])=>k!=='kupas').map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-stage">Terjadi di tahap</label><select id="f-stage" name="stage"><option value="">Pilih tahap</option>${Object.entries(STAGES).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-note">Catatan (wajib jika kategori Lainnya)</label><textarea id="f-note" name="note"></textarea></div>`;
+  const kgLabel = {masuk:'Berat masuk',produksi:'Berat buah kotor yang masuk ke produksi',eceran:'Berat terjual eceran',waste:'Berat waste'}[t];
+  return `<div class="seg" role="tablist" aria-label="Jenis catatan" style="grid-template-columns:repeat(${types.length},1fr)">${types.map(k=>`<button type="button" role="tab" aria-selected="${k===t}" class="seg-${k}" data-act="type" data-v="${k}">${TYPES[k].label}</button>`).join('')}</div>
+  <form id="f" class="card form" novalidate>
+    <div class="field"><label for="f-date">Tanggal</label><input id="f-date" name="date" type="date" value="${esc(d.date)}" max="${todayStr()}"></div>
+    <div class="field"><label for="f-fruit">Jenis buah</label>
+      <input id="f-fruit" name="fruit" type="text" list="fruit-list" autocomplete="off" placeholder="Ketik nama buah atau pilih di bawah" value="${esc(d.fruit)}">
+      <datalist id="fruit-list">${opts}</datalist>
+      ${quick?`<div class="chips wrap">${quick}</div>`:''}
+      <p class="hint">Buah yang belum ada di daftar otomatis ditambahkan saat disimpan.</p>
+      ${canManage()?'<button type="button" class="link" data-act="fruits">Kelola daftar buah</button>':''}</div>
+    <div class="field"><label for="f-kg">${kgLabel} (kg)</label>
+      <div class="kg"><input id="f-kg" name="kg" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><span>kg</span></div></div>
+    ${extra}
+    <p class="hint">Dicatat atas nama <b>${esc(st.me.full_name)}</b> (${esc(ROLE[st.me.role])}).</p>
+    <div id="f-err"></div>
+    <button class="btn ${t==='waste'?'waste':'pri'}" type="submit">Simpan ${esc(TYPES[t].label.toLowerCase())}</button>
+  </form>`;
+}
+
+async function submitEntry(form){
+  const fd = new FormData(form), t = ui.type;
+  if(!allowedTypes().includes(t)){ toast('Perananmu tidak bisa membuat catatan ini.'); return; }
+  const typed = normName(fd.get('fruit'));
+  const row = {id:uuid(), entry_date:String(fd.get('date')||''), type:t, fruit_id:null,
+    kg:parseFloat(String(fd.get('kg')||'').replace(',','.')), price:null, origin:null, menu:null,
+    category:null, stage:null, note:null, created_by:st.me.id};
+  const errs = [];
+  if(!row.entry_date) errs.push('Isi tanggal.'); else if(row.entry_date>todayStr()) errs.push('Tanggal tidak boleh di masa depan.');
+  if(!typed) errs.push('Isi jenis buah.');
+  if(!isFinite(row.kg) || row.kg<=0) errs.push('Isi berat lebih dari 0 kg.');
+  else if(row.kg>99999) errs.push('Berat terlalu besar. Periksa lagi angkanya.');
+  const price = parseFloat(fd.get('price')); if(isFinite(price) && price>=0) row.price = price;
+  if(t==='masuk'){ const o = String(fd.get('origin')||'').trim(); if(o) row.origin = o; }
+  if(t==='produksi'){
+    const m = String(fd.get('menu')||'').trim(); if(m) row.menu = m;
+    const net = parseFloat(String(fd.get('net')||'').replace(',','.'));
+    if(!isFinite(net) || net<=0) errs.push('Isi berat setelah dikupas, lebih dari 0 kg.');
+    else if(isFinite(row.kg) && net>row.kg+0.0001) errs.push('Berat bersih tidak boleh lebih besar dari berat kotor.');
+    else row.kg_net = net;
+    if(!st.migrated) errs.push('Database belum diperbarui. Minta manager menjalankan 3-update.sql di Supabase.');
+  }
+  if(t==='waste'){
+    row.category = String(fd.get('cat')||'') || null; row.stage = String(fd.get('stage')||'') || null;
+    const n = String(fd.get('note')||'').trim(); if(n) row.note = n;
+    if(!row.category) errs.push('Pilih kategori waste.');
+    if(!row.stage) errs.push('Pilih tahap terjadinya waste.');
+    if(row.category==='lainnya' && !row.note) errs.push('Tulis alasan waste pada catatan.');
+  }
+  const box = $('#f-err');
+  if(errs.length){ box.innerHTML = `<div class="err" role="alert"><ul>${errs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`; box.scrollIntoView({block:'center'}); return; }
+  box.innerHTML = '';
+  const known = findFruit(typed);
+  let fname = typed;
+  if(known) fname = known.name;
+  else {
+    const sim = derived().fruits.find(f => similar(f.name, typed));
+    if(sim){
+      const okNew = await ask('Buah baru?', `"${typed}" mirip dengan "${sim.name}" yang sudah ada. Simpan sebagai buah baru?`, 'Ya, buah baru');
+      if(!okNew){ const fi = $('#f-fruit'); if(fi) fi.focus(); return; }
+    }
+  }
+  if(t!=='masuk'){
+    const avail = known ? stock()[known.id].stok : 0;
+    if(row.kg > avail + 0.001){
+      const ok = await ask('Stok tidak cukup', `Stok ${fname} tercatat ${kg(avail)}, sedangkan yang akan dicatat keluar ${kg(row.kg)}. Pastikan catatan buah masuk sudah diisi. Tetap simpan?`, 'Tetap simpan');
+      if(!ok) return;
+    }
+  }
+  if(known) row.fruit_id = known.id;
+  else { row.fruit_id = uuid(); enqueue({k:'fruit', row:{id:row.fruit_id, name:typed}}); }
+  enqueue({k:'entry', rows:[row]});
+  ui.draft = {date:row.entry_date, fruit:fname};
+  toast(`Tersimpan: ${TYPES[t].label.toLowerCase()} ${kg(row.kg)} ${fname}${row.kg_net!=null?', hasil '+pct(row.kg_net/row.kg*100):''}${known?'':'. Buah baru masuk ke daftar.'}`);
+  render(); updateHeader(); sync();
+}
+
+/* =====================================================================
+   Tampilan: Laporan
+   ===================================================================== */
+function bars(obj, labels){
+  const tot = Object.values(obj).reduce((a,b)=>a+b,0);
+  if(!tot) return '<p class="hint">Belum ada waste tercatat pada bulan ini.</p>';
+  return '<div class="bars">'+Object.entries(obj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+    `<div><div class="bar-l"><span>${esc(labels[k]||k)}</span><b>${kg(v)} (${pct(v/tot*100)})</b></div><div class="bar-t"><i style="width:${(v/tot*100).toFixed(1)}%"></i></div></div>`).join('')+'</div>';
+}
+function viewLaporan(){
+  const m = ui.month, cur = monthStats(m), prev = monthStats(addMonths(m,-1));
+  const target = parseFloat(st.settings.waste_target);
+  let tag = '', cmp = '';
+  if(cur.pct!=null && isFinite(target)){
+    tag = cur.pct<=target ? `<span class="tag ok">Dalam target ${pct(target)}</span>` : `<span class="tag bad">Di atas target ${pct(target)}</span>`;
+  }
+  if(cur.pct!=null && prev.pct!=null){
+    const df = cur.pct-prev.pct;
+    cmp = Math.abs(df)<0.05 ? `Sama dengan ${esc(monthLabel(addMonths(m,-1)))}.` :
+      `${df>0?'Naik':'Turun'} ${nf1.format(Math.abs(Math.round(df*10)/10))} poin dibanding ${esc(monthLabel(addMonths(m,-1)))}.`;
+  }
+  const fr = Object.entries(cur.fruits).filter(([,v])=>v.masuk||v.waste).sort((a,b)=>b[1].waste-a[1].waste);
+  const frRows = fr.length ? fr.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="n">${kg(v.masuk)}</td><td class="n">${kg(v.waste)}</td><td class="n">${v.masuk>0?pct(v.waste/v.masuk*100):'\u2013'}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="hint">Belum ada data bulan ini.</td></tr>';
+  const months = [5,4,3,2,1,0].map(i=>addMonths(m,-i));
+  const tp = months.map(x=>monthStats(x).pct);
+  const mx = Math.max(1, ...tp.filter(v=>v!=null));
+  const trend = months.map((x,i)=>`<div class="${x===m?'cur':''}"><b>${tp[i]==null?'\u2013':pct(tp[i])}</b>${tp[i]==null?'':`<i style="height:${Math.max(4,tp[i]/mx*90).toFixed(0)}px"></i>`}<span>${esc(monthShort(x))}</span></div>`).join('');
+  const yEntries = Object.entries(cur.yield).sort((a,b)=>b[1].kotor-a[1].kotor);
+  const yRows = yEntries.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="n">${kg(v.kotor)}</td><td class="n">${kg(v.bersih)}</td><td class="n">${pct(v.bersih/v.kotor*100)}</td></tr>`).join('');
+  const yTot = cur.kotor>0 ? `<tr><td><b>Total</b></td><td class="n"><b>${kg(cur.kotor)}</b></td><td class="n"><b>${kg(cur.bersih)}</b></td><td class="n"><b>${pct(cur.bersih/cur.kotor*100)}</b></td></tr>` : '';
+  const yieldSec = `<section class="card sec"><h2>Hasil produksi setelah dikupas</h2><table><thead><tr><th>Buah</th><th class="n">Kotor</th><th class="n">Bersih</th><th class="n">Hasil</th></tr></thead><tbody>${yRows?yRows+yTot:'<tr><td colspan="4" class="hint">Belum ada data bulan ini.</td></tr>'}</tbody></table>${cur.noNet>0?`<p class="hint" style="margin-top:8px">${kg(cur.noNet)} produksi belum punya berat bersih (catatan lama).</p>`:''}<p class="hint" style="margin-top:8px">Sisa kupas dihitung otomatis dari berat kotor dikurangi berat bersih, dan sudah termasuk dalam angka waste.</p></section>`;
+  const sm = supMonth(m);
+  const sRows = Object.entries(sm).sort((a,b)=>sName(a[0]).localeCompare(sName(b[0]),'id')).map(([id,v])=>`<tr><td>${esc(sName(id))}</td><td class="n">${fq(v.masuk,'')}</td><td class="n">${fq(v.pakai,'')}</td><td class="n">${fq(v.rusak,'')}</td><td>${esc(sUnit(id))}</td></tr>`).join('');
+  const supSec = st.migrated ? `<section class="card sec"><h2>Bahan dan kemasan</h2><table><thead><tr><th>Bahan</th><th class="n">Masuk</th><th class="n">Dipakai</th><th class="n">Rusak</th><th>Sat.</th></tr></thead><tbody>${sRows||'<tr><td colspan="5" class="hint">Belum ada data bulan ini.</td></tr>'}</tbody></table></section>` : '';
+  return `<div class="mbar"><button class="btn" data-act="month" data-v="-1" aria-label="Bulan sebelumnya">\u2039</button>
+      <input type="month" id="m" value="${esc(m)}" aria-label="Pilih bulan"><button class="btn" data-act="month" data-v="1" aria-label="Bulan berikutnya">\u203A</button></div>
+    <section class="card kpi"><span class="sub">Waste ${esc(monthLabel(m))}</span>
+      <p class="big">${cur.pct==null?'\u2013':pct(cur.pct)}</p>
+      <p class="sub">${cur.masuk>0?`${kg(cur.waste)} waste dari ${kg(cur.masuk)} buah masuk.`:'Belum ada buah masuk pada bulan ini.'}</p>
+      ${tag}${cmp?`<p class="sub">${cmp}</p>`:''}
+      ${cur.pctNet!=null?`<p class="hint">Tanpa sisa kupas: ${pct(cur.pctNet)} (${kg(cur.waste-cur.kupas)})</p>`:''}</section>
+    <section class="grid2">
+      <div><span class="lbl">Masuk</span><br><strong>${kg(cur.masuk)}</strong></div>
+      <div><span class="lbl">Ke produksi</span><br><strong>${kg(cur.produksi)}</strong></div>
+      <div><span class="lbl">Eceran</span><br><strong>${kg(cur.eceran)}</strong></div>
+      <div><span class="lbl">Koreksi opname</span><br><strong>${skg(cur.koreksi)}</strong></div>
+    </section>
+    <section class="card sec"><h2>Waste per kategori</h2>${bars(cur.cats, CATS)}</section>
+    <section class="card sec"><h2>Waste per tahap</h2>${bars(cur.stages, STAGES)}</section>
+    <section class="card sec"><h2>Per jenis buah</h2><table><thead><tr><th>Buah</th><th class="n">Masuk</th><th class="n">Waste</th><th class="n">%</th></tr></thead><tbody>${frRows}</tbody></table></section>
+    ${yieldSec}${supSec}
+    <section class="card sec"><h2>Waste 6 bulan terakhir</h2><div class="trend">${trend}</div></section>
+    ${canManage()?'<button class="btn" data-act="export-csv">Unduh CSV bulan ini</button>':''}`;
+}
+
+/* =====================================================================
+   Tampilan: Riwayat
+   ===================================================================== */
+function viewRiwayat(){
+  const f = ui.filter;
+  const list = derived().live.filter(e=>f==='semua'||e.type===f)
+    .sort((a,b)=>b.entry_date.localeCompare(a.entry_date)||Date.parse(b.created_at)-Date.parse(a.created_at));
+  const chips = ['semua','masuk','produksi','eceran','waste','koreksi'].map(k=>`<button class="chip" data-act="filter" data-v="${k}" aria-pressed="${k===f}">${k==='semua'?'Semua':TYPES[k].label}</button>`).join('');
+  const rows = list.slice(0,150).map(e=>`<div class="he ${e._p?'pend':''}"><div class="he-b">
+      <div class="he-t"><span class="badge b-${e.type}">${esc(TYPES[e.type].label)}</span><strong>${esc(fruitName(e.fruit_id))}</strong>${e._p?'<span class="badge b-pend">Belum terkirim</span>':''}</div>
+      <span class="he-d">${esc(dateLabel(e.entry_date))}, ${esc(detail(e))}</span></div>
+      <div style="text-align:right"><div class="he-k">${e.type==='koreksi'?skg(Number(e.kg)):kg(Number(e.kg))}</div>${canDelete(e)?`<button class="x" data-act="del" data-id="${esc(e.id)}">Hapus</button>`:''}</div></div>`).join('');
+  return `<div class="row" style="justify-content:space-between;align-items:center"><div class="hint">${list.length} catatan</div>${canManage()?'<button class="btn sm" data-act="settings">Pengaturan</button>':''}</div>
+    <div class="chips">${chips}</div>
+    ${list.length?`<div class="hist">${rows}</div>${list.length>150?'<p class="hint">Menampilkan 150 catatan terbaru. Unduh CSV di tab Laporan untuk data lengkap.</p>':''}`:'<section class="card empty"><h2>Belum ada catatan</h2><p>Catatan yang disimpan semua staf akan muncul di sini.</p></section>'}`;
+}
+
+/* =====================================================================
+   Tampilan: Staf (manager)
+   ===================================================================== */
+function viewStaf(){
+  const me = st.me;
+  const rows = st.profiles.slice().sort((a,b)=>(Number(b.active)-Number(a.active))||a.full_name.localeCompare(b.full_name,'id')).map(p => {
+    const self = p.id===me.id;
+    return `<article class="sc ${p.active?'':'off'}">
+      <div class="sc-t"><strong>${esc(p.full_name)}</strong>${self?'<span class="hint">(kamu)</span>':''}<span class="badge r-${esc(p.role)}">${esc(ROLE[p.role]||p.role)}</span>${p.active?'':'<span class="tag off">Nonaktif</span>'}</div>
+      <span class="hint">${esc(p.email)}</span>
+      <div class="row" style="justify-content:flex-start">
+        <button class="btn sm" data-act="staff-edit" data-id="${esc(p.id)}">Ubah</button>
+        <button class="btn sm" data-act="staff-pw" data-id="${esc(p.id)}">Reset sandi</button>
+        ${self?'':`<button class="btn sm" data-act="staff-active" data-id="${esc(p.id)}">${p.active?'Nonaktifkan':'Aktifkan'}</button>
+        <button class="btn sm danger" data-act="staff-del" data-id="${esc(p.id)}">Hapus</button>`}
+      </div></article>`;
+  }).join('');
+  return `<div class="row" style="justify-content:space-between;align-items:center"><div class="hint">${st.profiles.length} akun</div><button class="btn pri sm" data-act="staff-new">Tambah staf</button></div>
+    ${rows||'<section class="card empty"><h2>Belum ada staf</h2></section>'}
+    <section class="card sec"><h2>Hak akses per peran</h2>
+      <table class="perm"><tbody>
+        <tr><td>Manager</td><td>Semua catatan, laporan, kelola staf, daftar buah, target waste, hapus catatan siapa pun</td></tr>
+        <tr><td>Admin</td><td>Semua jenis catatan, opname stok, laporan, daftar buah</td></tr>
+        <tr><td>Produksi</td><td>Catat keluar ke produksi dan waste; lihat stok dan laporan</td></tr>
+        <tr><td>Kasir</td><td>Catat penjualan eceran dan waste; lihat stok dan laporan</td></tr>
+      </tbody></table>
+      <p class="hint" style="margin-top:8px">Semua staf bisa menghapus catatannya sendiri dalam 24 jam. Staf yang sudah punya catatan sebaiknya dinonaktifkan, bukan dihapus, agar riwayat tetap utuh.</p></section>`;
+}
+function roleOptions(sel){ return Object.entries(ROLE).map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${esc(v)}</option>`).join(''); }
+function openStaffNew(){
+  openDlg(`<form id="f-staff-new" class="dl" novalidate><h2>Tambah staf</h2>
+    <div class="field"><label for="n-full">Nama lengkap</label><input id="n-full" name="full_name" type="text" autocomplete="off"></div>
+    <div class="field"><label for="n-email">Email</label><input id="n-email" name="email" type="email" autocomplete="off" inputmode="email" autocapitalize="off"></div>
+    <div class="field"><label for="n-role">Peran</label><select id="n-role" name="role">${roleOptions('kasir')}</select></div>
+    <div class="field"><label for="n-pw">Kata sandi sementara (minimal 8 karakter)</label>
+      <div class="row" style="flex-wrap:nowrap"><input id="n-pw" name="password" type="text" autocomplete="off"><button type="button" class="btn" data-act="genpw" data-t="#n-pw">Buat acak</button></div></div>
+    <div id="s-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="close">Batal</button><button class="btn pri" type="submit">Buat akun</button></div></form>`);
+}
+async function submitStaffNew(form){
+  const fd = new FormData(form);
+  const p = {action:'create', full_name:String(fd.get('full_name')||'').trim(), email:String(fd.get('email')||'').trim().toLowerCase(), role:String(fd.get('role')||''), password:String(fd.get('password')||'')};
+  const errs = [];
+  if(!p.full_name) errs.push('Isi nama lengkap.');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) errs.push('Isi email yang valid.');
+  if(p.password.length<8) errs.push('Kata sandi minimal 8 karakter.');
+  if(errs.length){ $('#s-err').innerHTML = `<div class="err" role="alert"><ul>${errs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`; return; }
+  const btn = form.querySelector('button[type=submit]'); btn.disabled = true;
+  const ok = await mgmt(async()=>{ await staffCall(p); await pull(); }, null, '#s-err');
+  btn.disabled = false;
+  if(ok){
+    openDlg(`<div class="dl"><h2>Akun dibuat</h2><p>Sampaikan data ini ke ${esc(p.full_name)}. Minta dia mengganti kata sandi lewat menu Akun setelah login.</p>
+      <div class="cred"><span>Email: ${esc(p.email)}</span><span>Kata sandi: ${esc(p.password)}</span><span>Peran: ${esc(ROLE[p.role])}</span></div>
+      <div class="row"><button class="btn pri" data-act="close">Selesai</button></div></div>`);
+    render();
+  }
+}
+function openStaffEdit(id){
+  const p = st.profiles.find(x=>x.id===id); if(!p) return;
+  const self = id===st.me.id;
+  openDlg(`<form id="f-staff-edit" class="dl" data-id="${esc(id)}" novalidate><h2>Ubah staf</h2>
+    <div class="field"><label for="e-full">Nama lengkap</label><input id="e-full" name="full_name" type="text" value="${esc(p.full_name)}"></div>
+    <div class="field"><label for="e-role">Peran</label><select id="e-role" name="role" ${self?'disabled':''}>${roleOptions(p.role)}</select>${self?'<p class="hint">Kamu tidak bisa mengubah perananmu sendiri.</p>':''}</div>
+    <p class="hint">Email: ${esc(p.email)}</p>
+    <div id="s-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="close">Batal</button><button class="btn pri" type="submit">Simpan</button></div></form>`);
+}
+async function submitStaffEdit(form){
+  const id = form.dataset.id, fd = new FormData(form);
+  const p = st.profiles.find(x=>x.id===id); if(!p) return;
+  const name = String(fd.get('full_name')||'').trim();
+  if(!name){ $('#s-err').innerHTML = '<div class="err" role="alert">Isi nama lengkap.</div>'; return; }
+  const body = {action:'update', id, full_name:name};
+  if(id!==st.me.id) body.role = String(fd.get('role')||p.role);
+  const ok = await mgmt(async()=>{ await staffCall(body); await pull(); }, 'Perubahan tersimpan', '#s-err');
+  if(ok){ dlg.close(); render(); }
+}
+function openStaffPw(id){
+  const p = st.profiles.find(x=>x.id===id); if(!p) return;
+  openDlg(`<form id="f-staff-pw" class="dl" data-id="${esc(id)}" novalidate><h2>Reset kata sandi</h2>
+    <p>Atur kata sandi baru untuk ${esc(p.full_name)}.</p>
+    <div class="field"><label for="p-pw">Kata sandi baru (minimal 8 karakter)</label>
+      <div class="row" style="flex-wrap:nowrap"><input id="p-pw" name="password" type="text" autocomplete="off"><button type="button" class="btn" data-act="genpw" data-t="#p-pw">Buat acak</button></div></div>
+    <div id="s-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="close">Batal</button><button class="btn pri" type="submit">Simpan sandi</button></div></form>`);
+}
+async function submitStaffPw(form){
+  const id = form.dataset.id, pw = String(new FormData(form).get('password')||'');
+  const p = st.profiles.find(x=>x.id===id);
+  if(pw.length<8){ $('#s-err').innerHTML = '<div class="err" role="alert">Kata sandi minimal 8 karakter.</div>'; return; }
+  const ok = await mgmt(async()=>{ await staffCall({action:'reset_password', id, password:pw}); }, null, '#s-err');
+  if(ok){
+    openDlg(`<div class="dl"><h2>Kata sandi diganti</h2><p>Sampaikan kata sandi baru ini ke ${esc(p?p.full_name:'staf')}.</p>
+      <div class="cred"><span>Kata sandi: ${esc(pw)}</span></div><div class="row"><button class="btn pri" data-act="close">Selesai</button></div></div>`);
+  }
+}
+
+/* =====================================================================
+   Daftar buah, opname, pengaturan, akun
+   ===================================================================== */
+function openFruits(){
+  const d = derived(), s = stock();
+  const list = d.fruits.slice().sort((a,b)=>a.name.localeCompare(b.name,'id')).map(f => {
+    const n = d.live.filter(e=>e.fruit_id===f.id).length, anyUse = d.all.some(e=>e.fruit_id===f.id);
+    return `<div class="fr"><div class="fr-t"><strong>${esc(f.name)}</strong>${f.hidden?'<span class="badge b-koreksi">Disembunyikan</span>':''}${f._p?'<span class="badge b-pend">Belum terkirim</span>':''}<span class="hint">${n} catatan, stok ${kg((s[f.id]||{stok:0}).stok)}</span></div>
+      <div class="row" style="justify-content:flex-start">
+        <button type="button" class="btn sm" data-act="fruit-ren" data-fid="${esc(f.id)}" ${f._p?'aria-disabled="true"':''}>Ganti nama</button>
+        <button type="button" class="btn sm" data-act="fruit-hide" data-fid="${esc(f.id)}" ${f._p?'aria-disabled="true"':''}>${f.hidden?'Tampilkan':'Sembunyikan'}</button>
+        ${isMgr()?`<button type="button" class="btn sm danger" data-act="fruit-del" data-fid="${esc(f.id)}" ${anyUse||f._p?'aria-disabled="true" title="Sudah dipakai di catatan"':''}>Hapus</button>`:''}
+      </div></div>`;
+  }).join('');
+  openDlg(`<div class="dl"><h2>Daftar buah</h2>
+    <p>Tambah, ganti nama, atau sembunyikan buah kapan saja. Buah yang disembunyikan tidak muncul di pilihan Catat, tetapi riwayat dan laporannya tetap ada.</p>
+    <form id="f-fruit-add" class="form" novalidate>
+      <div class="field"><label for="n-name">Tambah buah baru</label>
+        <div class="row" style="flex-wrap:nowrap"><input id="n-name" name="name" type="text" autocomplete="off" placeholder="Contoh: Markisa"><button class="btn pri" type="submit">Tambah</button></div></div>
+      <div id="n-err"></div>
+    </form>
+    <div class="fl2">${list || '<p class="hint">Belum ada buah. Tambahkan di atas.</p>'}</div>
+    <div class="row"><button class="btn ghost" type="button" data-act="close">Tutup</button></div></div>`);
+}
+function submitAddFruit(form){
+  const name = normName(new FormData(form).get('name')), err = $('#n-err');
+  if(!name){ err.innerHTML = '<div class="err" role="alert">Isi nama buah.</div>'; return; }
+  if(findFruit(name)){ err.innerHTML = '<div class="err" role="alert">Buah ini sudah ada di daftar.</div>'; return; }
+  enqueue({k:'fruit', row:{id:uuid(), name}});
+  toast(`${name} ditambahkan`); ui.dirty = true; openFruits(); sync();
+}
+function openRename(fid){
+  const f = derived().fmap[fid]; if(!f) return;
+  openDlg(`<form id="f-fruit-ren" class="dl" data-fid="${esc(fid)}" novalidate><h2>Ganti nama ${esc(f.name)}</h2>
+    <p>Semua catatan lama ikut memakai nama baru, di semua perangkat.</p>
+    <div class="field"><label for="r-name">Nama baru</label><input id="r-name" name="name" type="text" autocomplete="off" value="${esc(f.name)}"></div>
+    <div id="r-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="fruits">Batal</button><button class="btn pri" type="submit">Simpan nama</button></div></form>`);
+  setTimeout(()=>{ const i = $('#r-name'); if(i){ i.focus(); i.select(); } },30);
+}
+async function submitRename(form){
+  const fid = form.dataset.fid, nn = normName(new FormData(form).get('name')), f = derived().fmap[fid];
+  if(!f) return;
+  if(!nn){ $('#r-err').innerHTML = '<div class="err" role="alert">Isi nama buah.</div>'; return; }
+  if(nn!==f.name && derived().fruits.some(x=>x.id!==fid && x.name.toLowerCase()===nn.toLowerCase())){ $('#r-err').innerHTML = '<div class="err" role="alert">Nama itu sudah dipakai buah lain.</div>'; return; }
+  if(nn===f.name){ openFruits(); return; }
+  const ok = await mgmt(async()=>{
+    const rows = await patchRow('/rest/v1/fruits?id=eq.'+encodeURIComponent(fid)+'&select=id,name,hidden', {name:nn});
+    st.fruits = st.fruits.map(x=>x.id===fid?rows[0]:x); saveCache(); bump();
+  }, 'Nama diganti menjadi '+nn, '#r-err');
+  if(ok){ ui.dirty = true; openFruits(); }
+}
+async function toggleHide(fid){
+  const f = derived().fmap[fid]; if(!f) return;
+  const ok = await mgmt(async()=>{
+    const rows = await patchRow('/rest/v1/fruits?id=eq.'+encodeURIComponent(fid)+'&select=id,name,hidden', {hidden:!f.hidden});
+    st.fruits = st.fruits.map(x=>x.id===fid?rows[0]:x); saveCache(); bump();
+  });
+  if(ok){ ui.dirty = true; openFruits(); }
+}
+async function deleteFruit(fid){
+  const f = derived().fmap[fid]; if(!f) return;
+  const ok = await mgmt(async()=>{
+    const r = await api('/rest/v1/fruits?id=eq.'+encodeURIComponent(fid), {method:'DELETE', headers:{Prefer:'return=representation'}});
+    if(!r.ok) throw await failure(r);
+    const rows = await r.json(); if(!rows.length) throw new Error(FRIENDLY['42501']);
+    st.fruits = st.fruits.filter(x=>x.id!==fid); saveCache(); bump();
+  }, f.name+' dihapus');
+  if(ok){ ui.dirty = true; openFruits(); }
+}
+
+function openOpname(fid){
+  const f = derived().fmap[fid]; if(!f) return;
+  const sys = (stock()[fid]||{stok:0}).stok;
+  openDlg(`<form id="f-opname" class="dl" data-fid="${esc(fid)}" novalidate><h2>Hitung fisik ${esc(f.name)}</h2>
+    <p>Stok di sistem saat ini ${kg(sys)}. Masukkan hasil timbang atau hitung di gudang. Selisihnya dicatat sebagai koreksi opname.</p>
+    <div class="field"><label for="o-kg">Stok fisik (kg)</label><div class="kg"><input id="o-kg" name="kg" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><span>kg</span></div></div>
+    <div id="o-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="close">Batal</button><button class="btn pri" type="submit">Simpan koreksi</button></div></form>`);
+}
+function submitOpname(form){
+  const fid = form.dataset.fid, f = derived().fmap[fid]; if(!f) return;
+  const phys = parseFloat(String(new FormData(form).get('kg')||'').replace(',','.')), err = $('#o-err');
+  if(!isFinite(phys) || phys<0){ err.innerHTML = '<div class="err" role="alert">Isi stok fisik, minimal 0 kg.</div>'; return; }
+  const sys = (stock()[fid]||{stok:0}).stok, delta = Math.round((phys-sys)*100)/100;
+  dlg.close();
+  if(delta===0){ toast('Stok fisik sama dengan stok di sistem.'); return; }
+  enqueue({k:'entry', rows:[{id:uuid(), entry_date:todayStr(), type:'koreksi', fruit_id:fid, kg:delta, price:null, origin:null, menu:null, category:null, stage:null, note:`Opname: fisik ${kg(phys)}, sistem ${kg(sys)}`, created_by:st.me.id}]});
+  toast(`Koreksi ${skg(delta)} untuk ${f.name} tersimpan`);
+  render(); updateHeader(); sync();
+}
+
+const legacyData = () => {
+  try{
+    if(localStorage.getItem('sb.legacyDone')) return null;
+    const d = JSON.parse(localStorage.getItem('stokbuah.v1')||'null');
+    if(d && Array.isArray(d.entries) && d.entries.length) return d;
+  }catch(e){}
+  return null;
+};
+function openSettings(){
+  const leg = canManage() ? legacyData() : null;
+  openDlg(`<div class="dl"><h2>Pengaturan</h2>
+    ${isMgr()?`<form id="f-set" class="form" novalidate>
+      <div class="field"><label for="s-target">Target waste maksimum per bulan (%), boleh kosong</label><input id="s-target" name="target" type="number" inputmode="decimal" step="any" min="0" value="${esc(st.settings.waste_target==null?'':st.settings.waste_target)}"></div>
+      <div id="st-err"></div>
+      <button class="btn pri" type="submit">Simpan target</button></form><hr>`:''}
+    <h2 style="font-size:17px">Daftar buah</h2>
+    <p>${derived().fruits.filter(f=>!f.hidden).length} buah aktif. Tambah, ganti nama, atau sembunyikan sesuai kebutuhan.</p>
+    <button class="btn" type="button" data-act="fruits">Kelola daftar buah</button>
+    ${leg?`<hr><h2 style="font-size:17px">Data lama di perangkat ini</h2>
+      <p>Ditemukan ${leg.entries.length} catatan dari versi sebelumnya yang belum dikirim ke database bersama.</p>
+      <button class="btn" type="button" data-act="legacy">Impor data lama</button>`:''}
+    <div class="row"><button class="btn ghost" type="button" data-act="close">Tutup</button></div></div>`);
+}
+async function submitSettings(form){
+  const t = parseFloat(new FormData(form).get('target')), val = isFinite(t) && t>=0 ? t : null;
+  const ok = await mgmt(async()=>{
+    await patchRow('/rest/v1/settings?id=eq.1', {waste_target:val});
+    st.settings.waste_target = val; saveCache(); bump();
+  }, 'Target tersimpan', '#st-err');
+  if(ok){ dlg.close(); render(); }
+}
+async function importLegacy(){
+  const d = legacyData(); if(!d) return;
+  const ok = await ask('Impor data lama?', `${d.entries.length} catatan dari perangkat ini akan dikirim ke database bersama atas nama akunmu. Nama pencatat lama dicantumkan pada kolom catatan. Lakukan ini satu kali saja.`, 'Impor sekarang');
+  if(!ok) return;
+  const fm = {}; derived().fruits.forEach(f => { fm[f.name.trim().toLowerCase()] = f.id; });
+  const valid = d.entries.filter(e => e && TYPES[e.type] && /^\d{4}-\d{2}-\d{2}$/.test(e.date||'') && isFinite(e.kg) && e.fruit);
+  new Set(valid.map(e=>normName(e.fruit))).forEach(name => {
+    const k = name.toLowerCase();
+    if(!fm[k]){ const id = uuid(); fm[k] = id; enqueue({k:'fruit', row:{id, name}}); }
+  });
+  const rows = valid.map(e => ({
+    id:uuid(), entry_date:e.date, type:e.type, fruit_id:fm[normName(e.fruit).toLowerCase()], kg:e.kg,
+    price:isFinite(e.price)?e.price:null, origin:e.origin||null, menu:e.menu||null,
+    category:e.type==='waste'?(e.cat||'lainnya'):null, stage:e.type==='waste'?(e.stage||'gudang'):null,
+    note:[e.note, e.user?('Dicatat '+e.user+' (data lama)'):'(data lama)'].filter(Boolean).join('. '), created_by:st.me.id
+  }));
+  for(let i=0;i<rows.length;i+=100) enqueue({k:'entry', rows:rows.slice(i,i+100)});
+  try{ localStorage.setItem('sb.legacyDone','1'); }catch(e){}
+  toast(`${rows.length} catatan lama sedang dikirim`);
+  dlg.close(); render(); updateHeader(); sync();
+}
+
+function openAccount(){
+  const me = st.me;
+  openDlg(`<div class="dl"><h2>${esc(me?me.full_name:'Akun')}</h2>
+    <p>${esc(me?ROLE[me.role]:'')}${me?', ':''}${esc(st.session?st.session.user.email:'')}</p>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <span class="hint">${st.lastSync?'Terakhir sinkron pukul '+timeLabel(st.lastSync):'Belum pernah sinkron'}${st.queue.length?`, ${st.queue.length} belum terkirim`:''}</span>
+      <button class="btn sm" type="button" data-act="sync">Sinkronkan</button></div>
+    <hr>
+    <form id="f-pw" class="form" novalidate><h2 style="font-size:17px">Ganti kata sandi</h2>
+      <div class="field"><label for="pw1">Kata sandi baru (minimal 8 karakter)</label><input id="pw1" name="p1" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="pw2">Ulangi kata sandi baru</label><input id="pw2" name="p2" type="password" autocomplete="new-password"></div>
+      <div id="pw-err"></div>
+      <button class="btn" type="submit">Simpan kata sandi</button></form>
+    <hr>
+    <div class="row"><button class="btn danger" type="button" data-act="logout">Keluar</button><button class="btn ghost" type="button" data-act="close">Tutup</button></div></div>`);
+}
+async function submitPw(form){
+  const fd = new FormData(form), a = String(fd.get('p1')||''), b2 = String(fd.get('p2')||''), err = $('#pw-err');
+  if(a.length<8){ err.innerHTML = '<div class="err" role="alert">Kata sandi minimal 8 karakter.</div>'; return; }
+  if(a!==b2){ err.innerHTML = '<div class="err" role="alert">Kedua kata sandi tidak sama.</div>'; return; }
+  const ok = await mgmt(async()=>{
+    const r = await api('/auth/v1/user', {method:'PUT', body:{password:a}});
+    if(!r.ok){
+      const e = await failure(r);
+      if(/different/i.test(e.message)) e.message = 'Kata sandi baru harus berbeda dari yang lama.';
+      else if(/weak|short|least|characters/i.test(e.message)) e.message = 'Kata sandi terlalu lemah. Gunakan campuran huruf dan angka.';
+      throw e;
+    }
+  }, 'Kata sandi diganti', '#pw-err');
+  if(ok) form.reset();
+}
+function openRejected(){
+  openDlg(`<div class="dl"><h2>Catatan ditolak server</h2>
+    <p>Catatan ini tidak bisa disimpan di server, biasanya karena perananmu tidak mengizinkannya. Catat ulang bila perlu.</p>
+    <div class="fl2">${st.rejected.map(r=>`<div class="fr"><strong>${esc(r.desc)}</strong><span class="hint">${esc(r.msg)}</span></div>`).join('')}</div>
+    <div class="row"><button class="btn pri" data-act="rej-clear">Tutup dan buang</button></div></div>`);
+}
+
+/* =====================================================================
+   Unduh CSV
+   ===================================================================== */
+function download(name, text, mime){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text],{type:mime}));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function exportCsv(){
+  const q = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const head = ['tanggal','jenis','buah','kg','kg_bersih','harga_per_kg','asal','menu','kategori_waste','tahap','catatan','dicatat_oleh'];
+  const rows = derived().live.filter(e=>e.entry_date.startsWith(ui.month))
+    .sort((a,b)=>a.entry_date.localeCompare(b.entry_date)||Date.parse(a.created_at)-Date.parse(b.created_at))
+    .map(e=>[e.entry_date,TYPES[e.type].label,fruitName(e.fruit_id),e.kg,e.kg_net,e.price,e.origin,e.menu,e.category?CATS[e.category]:'',e.stage?STAGES[e.stage]:'',e.note,profName(e.created_by)].map(q).join(','));
+  download(`stok-buah-${ui.month}.csv`, '\ufeff'+[head.join(',')].concat(rows).join('\r\n'), 'text/csv;charset=utf-8');
+}
+
+/* =====================================================================
+   Render, navigasi, header
+   ===================================================================== */
+/* =====================================================================
+   Bahan dan kemasan
+   ===================================================================== */
+const sName = id => { const s = derived().smap[id]; return s ? s.name : '(bahan dihapus)'; };
+const sUnit = id => { const s = derived().smap[id]; return s ? s.unit : ''; };
+const fq = (n,u) => nf.format(Math.round(n*100)/100)+(u?' '+u:'');
+const sfq = (n,u) => (n>0?'+':n<0?'−':'')+fq(Math.abs(n),u);
+const findSupply = name => { const l = name.toLowerCase(); return derived().supplies.find(s => s.name.trim().toLowerCase()===l) || null; };
+const allowedSTypes = () => ROLE_STYPES[myRole()] || [];
+
+function supplyStock(){
+  const d = derived(), m = {};
+  const get = id => m[id] || (m[id] = {masuk:0,pakai:0,rusak:0,koreksi:0});
+  d.supplies.forEach(s => get(s.id));
+  d.sLive.forEach(e => { get(e.supply_id)[e.type] += Number(e.qty); });
+  Object.values(m).forEach(r => { r.stok = Math.round((r.masuk + r.koreksi - r.pakai - r.rusak)*100)/100; });
+  return m;
+}
+function lowSupplies(){
+  if(!st.migrated) return [];
+  const s = supplyStock();
+  return derived().supplies.filter(x => !x.hidden && x.min_stock!=null && (s[x.id]||{stok:0}).stok <= Number(x.min_stock));
+}
+function supMonth(m){
+  const r = {};
+  derived().sLive.filter(e => e.entry_date.startsWith(m)).forEach(e => {
+    const x = r[e.supply_id] || (r[e.supply_id] = {masuk:0,pakai:0,rusak:0,koreksi:0});
+    x[e.type] += Number(e.qty);
+  });
+  return r;
+}
+function quickSupplies(){
+  const d = derived(), act = d.supplies.filter(s=>!s.hidden).map(s=>s.name), out = [];
+  d.sLive.slice().sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).forEach(e => {
+    const n = sName(e.supply_id);
+    if(out.length<8 && act.includes(n) && !out.includes(n)) out.push(n);
+  });
+  act.slice().sort((a,b)=>a.localeCompare(b,'id')).forEach(n => { if(out.length<8 && !out.includes(n)) out.push(n); });
+  return out;
+}
+function sDetail(e){
+  const p = [];
+  if(e.price!=null) p.push(rp(Number(e.price))+'/'+sUnit(e.supply_id));
+  if(e.note) p.push(e.note);
+  p.push('oleh '+profName(e.created_by));
+  return p.join(', ');
+}
+function updateYield(){
+  const box = $('#yield-box'); if(!box) return;
+  const g = parseFloat(String(($('#f-kg')||{}).value||'').replace(',','.'));
+  const n = parseFloat(String(($('#f-net')||{}).value||'').replace(',','.'));
+  if(!isFinite(g) || g<=0 || !isFinite(n) || n<=0){ box.textContent = 'Isi berat kotor dan berat bersih untuk melihat persentase hasil.'; box.classList.remove('bad'); return; }
+  if(n>g){ box.textContent = 'Berat bersih lebih besar dari berat kotor. Periksa lagi angkanya.'; box.classList.add('bad'); return; }
+  box.classList.remove('bad');
+  box.innerHTML = `Hasil <b>${pct(n/g*100)}</b>. Sisa kupas ${kg(g-n)} (${pct((g-n)/g*100)}).`;
+}
+function updateUnitLabel(){
+  const el = $('#s-ulbl'); if(!el) return;
+  const i = $('#s-item'); const s = i ? findSupply(normName(i.value)) : null;
+  el.textContent = s ? s.unit : '';
+}
+
+function viewBahan(){
+  if(!st.migrated) return `<section class="card empty"><h2>Database belum diperbarui</h2><p>Fitur bahan dan kemasan butuh pembaruan database. Minta manager menjalankan berkas 3-update.sql di Supabase (SQL Editor), lalu buka ulang aplikasi.</p></section>`;
+  const lab = {stok:'Stok', catat:'Catat', riwayat:'Riwayat'};
+  const seg = `<div class="seg" role="tablist" aria-label="Bagian bahan" style="grid-template-columns:repeat(3,1fr)">${['stok','catat','riwayat'].map(k=>`<button type="button" role="tab" aria-selected="${k===ui.sub}" class="seg-masuk" data-act="sub" data-v="${k}">${lab[k]}</button>`).join('')}</div>`;
+  return seg + ({stok:viewBahanStok, catat:viewBahanCatat, riwayat:viewBahanRiwayat}[ui.sub] || viewBahanStok)();
+}
+function viewBahanStok(){
+  const d = derived(), s = supplyStock();
+  const list = d.supplies.slice().sort((a,b)=>a.name.localeCompare(b.name,'id'));
+  const low = lowSupplies().length;
+  const cards = list.map(x => {
+    const r = s[x.id], neg = r.stok < 0, isLow = !neg && x.min_stock!=null && r.stok <= Number(x.min_stock);
+    if(x.hidden && r.stok===0) return '';
+    return `<article class="fc ${neg?'neg':''} ${isLow?'low':''}">
+      <div class="fc-h"><h3>${esc(x.name)}${x._p?' <span class="badge b-pend">Belum terkirim</span>':''}</h3>${canManage()&&!x._p?`<button class="btn sm" data-act="s-opname" data-sid="${esc(x.id)}">Hitung fisik</button>`:''}</div>
+      <p class="stk"><strong>${fq(r.stok,x.unit)}</strong> tersisa</p>
+      ${neg?'<p class="warn">Stok minus. Ada catatan pakai yang belum punya catatan masuk.</p>':''}
+      ${isLow?`<p class="warn" style="color:#8A5A00">Stok menipis. Batas minimum ${fq(Number(x.min_stock),x.unit)}.</p>`:''}
+      <dl class="mini">
+        <div><dt>Masuk</dt><dd>${fq(r.masuk,'')}</dd></div>
+        <div><dt>Dipakai</dt><dd>${fq(r.pakai,'')}</dd></div>
+        <div class="w"><dt>Rusak</dt><dd>${fq(r.rusak,'')}</dd></div>
+        <div><dt>Koreksi</dt><dd>${sfq(r.koreksi,'')}</dd></div>
+      </dl></article>`;
+  }).join('');
+  const empty = !list.length ? `<section class="card empty"><h2>Belum ada bahan</h2><p>${canManage()?'Tambahkan cup, tutup, sedotan, dan bahan lain lewat Kelola daftar bahan.':'Minta admin atau manager menambahkan daftar bahan.'}</p></section>` : '';
+  return `${low?`<div class="card low"><strong>${low} bahan hampir habis</strong></div>`:''}${empty}${cards}${canManage()?'<button class="btn" data-act="supplies">Kelola daftar bahan</button>':''}`;
+}
+function viewBahanCatat(){
+  const types = allowedSTypes();
+  if(!types.length) return `<section class="card empty"><h2>Perananmu belum bisa mencatat</h2><p>Hubungi manager untuk mengatur perananmu.</p></section>`;
+  if(!types.includes(ui.stype)) ui.stype = types[0];
+  const t = ui.stype, d = ui.sdraft;
+  const sups = derived().supplies.filter(x=>!x.hidden).sort((a,b)=>a.name.localeCompare(b.name,'id'));
+  if(!sups.length && !canManage()) return `<section class="card empty"><h2>Belum ada bahan</h2><p>Minta admin atau manager menambahkan daftar bahan dulu.</p></section>`;
+  const opts = sups.map(x=>`<option value="${esc(x.name)}"></option>`).join('');
+  const quick = quickSupplies().map(n=>`<button type="button" class="chip" data-act="pick-item" data-item="${esc(n)}" aria-pressed="${n===d.item}">${esc(n)}</button>`).join('');
+  const cur = d.item ? findSupply(normName(d.item)) : null;
+  const unitSel = canManage() ? `<div class="field"><label for="s-unit">Satuan (hanya dipakai jika bahan baru)</label><select id="s-unit" name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></div>` : '';
+  const price = t==='masuk' ? `<div class="field"><label for="s-price">Harga beli per satuan (Rp), boleh kosong</label><input id="s-price" name="price" type="number" inputmode="numeric" min="0" step="any"></div>` : '';
+  const noteLabel = t==='rusak' ? 'Alasan (wajib)' : 'Catatan, boleh kosong';
+  const qLabel = {masuk:'Jumlah masuk', pakai:'Jumlah dipakai', rusak:'Jumlah rusak atau hilang'}[t];
+  return `<div class="seg" role="tablist" aria-label="Jenis catatan bahan" style="grid-template-columns:repeat(${types.length},1fr)">${types.map(k=>`<button type="button" role="tab" aria-selected="${k===t}" class="seg-${SBADGE[k]==='koreksi'?'produksi':SBADGE[k]}" data-act="stype" data-v="${k}">${STYPES[k].label}</button>`).join('')}</div>
+  <form id="f-sup" class="card form" novalidate>
+    <div class="field"><label for="s-date">Tanggal</label><input id="s-date" name="date" type="date" value="${esc(d.date)}" max="${todayStr()}"></div>
+    <div class="field"><label for="s-item">Bahan atau kemasan</label>
+      <input id="s-item" name="item" type="text" list="sup-list" autocomplete="off" placeholder="Ketik nama atau pilih di bawah" value="${esc(d.item)}">
+      <datalist id="sup-list">${opts}</datalist>
+      ${quick?`<div class="chips wrap">${quick}</div>`:''}
+      <p class="hint">${canManage()?'Bahan yang belum ada di daftar otomatis ditambahkan saat disimpan.':'Pilih dari daftar. Bahan baru ditambahkan oleh admin atau manager.'}</p></div>
+    <div class="field"><label for="s-qty">${qLabel}</label>
+      <div class="kg"><input id="s-qty" name="qty" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><span id="s-ulbl">${esc(cur?cur.unit:'')}</span></div></div>
+    ${unitSel}
+    ${price}
+    <div class="field"><label for="s-note">${noteLabel}</label><textarea id="s-note" name="note"></textarea></div>
+    <p class="hint">Dicatat atas nama <b>${esc(st.me.full_name)}</b> (${esc(ROLE[st.me.role])}).</p>
+    <div id="f-err"></div>
+    <button class="btn ${t==='rusak'?'waste':'pri'}" type="submit">Simpan ${esc(STYPES[t].label.toLowerCase())}</button>
+  </form>`;
+}
+function viewBahanRiwayat(){
+  const list = derived().sLive.slice().sort((a,b)=>b.entry_date.localeCompare(a.entry_date)||Date.parse(b.created_at)-Date.parse(a.created_at));
+  const rows = list.slice(0,100).map(e=>`<div class="he ${e._p?'pend':''}"><div class="he-b">
+      <div class="he-t"><span class="badge b-${SBADGE[e.type]}">${esc(STYPES[e.type].label)}</span><strong>${esc(sName(e.supply_id))}</strong>${e._p?'<span class="badge b-pend">Belum terkirim</span>':''}</div>
+      <span class="he-d">${esc(dateLabel(e.entry_date))}, ${esc(sDetail(e))}</span></div>
+      <div style="text-align:right"><div class="he-k">${e.type==='koreksi'?sfq(Number(e.qty),sUnit(e.supply_id)):fq(Number(e.qty),sUnit(e.supply_id))}</div>${canDelete(e)?`<button class="x" data-act="sdel" data-id="${esc(e.id)}">Hapus</button>`:''}</div></div>`).join('');
+  return list.length ? `<div class="hint">${list.length} catatan</div><div class="hist">${rows}</div>${list.length>100?'<p class="hint">Menampilkan 100 catatan terbaru.</p>':''}` : '<section class="card empty"><h2>Belum ada catatan</h2><p>Catatan bahan dan kemasan dari semua staf akan muncul di sini.</p></section>';
+}
+
+async function submitSupply(form){
+  const fd = new FormData(form), t = ui.stype;
+  if(!allowedSTypes().includes(t)){ toast('Perananmu tidak bisa membuat catatan ini.'); return; }
+  const typed = normName(fd.get('item'));
+  const row = {id:uuid(), entry_date:String(fd.get('date')||''), type:t, supply_id:null,
+    qty:parseFloat(String(fd.get('qty')||'').replace(',','.')), price:null, note:null, created_by:st.me.id};
+  const errs = [];
+  if(!row.entry_date) errs.push('Isi tanggal.'); else if(row.entry_date>todayStr()) errs.push('Tanggal tidak boleh di masa depan.');
+  if(!typed) errs.push('Isi nama bahan.');
+  if(!isFinite(row.qty) || row.qty<=0) errs.push('Isi jumlah lebih dari 0.');
+  else if(row.qty>9999999) errs.push('Jumlah terlalu besar. Periksa lagi angkanya.');
+  const price = parseFloat(fd.get('price')); if(isFinite(price) && price>=0) row.price = price;
+  const note = String(fd.get('note')||'').trim(); if(note) row.note = note;
+  if(t==='rusak' && !note) errs.push('Tulis alasan rusak atau hilang.');
+  let sup = typed ? findSupply(typed) : null;
+  if(typed && !sup && !canManage()) errs.push('Bahan "'+typed+'" belum ada di daftar. Minta admin atau manager menambahkannya.');
+  if(!st.migrated) errs.push('Database belum diperbarui. Minta manager menjalankan 3-update.sql di Supabase.');
+  const box = $('#f-err');
+  if(errs.length){ box.innerHTML = `<div class="err" role="alert"><ul>${errs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`; box.scrollIntoView({block:'center'}); return; }
+  box.innerHTML = '';
+  if(!sup){
+    const sim = derived().supplies.find(x => similar(x.name, typed));
+    if(sim){
+      const okNew = await ask('Bahan baru?', `"${typed}" mirip dengan "${sim.name}" yang sudah ada. Simpan sebagai bahan baru?`, 'Ya, bahan baru');
+      if(!okNew){ const i = $('#s-item'); if(i) i.focus(); return; }
+    }
+  }
+  if(t!=='masuk'){
+    const avail = sup ? supplyStock()[sup.id].stok : 0;
+    if(row.qty > avail + 0.001){
+      const ok = await ask('Stok tidak cukup', `Stok ${sup?sup.name:typed} tercatat ${fq(avail,sup?sup.unit:'')}, sedangkan yang akan dicatat ${fq(row.qty,sup?sup.unit:'')}. Pastikan catatan bahan masuk sudah diisi. Tetap simpan?`, 'Tetap simpan');
+      if(!ok) return;
+    }
+  }
+  let unit = sup ? sup.unit : '';
+  if(sup) row.supply_id = sup.id;
+  else { unit = String(fd.get('unit')||'pcs'); row.supply_id = uuid(); enqueue({k:'supply', row:{id:row.supply_id, name:typed, unit, min_stock:null}}); }
+  enqueue({k:'sentry', rows:[row]});
+  const nm = sup ? sup.name : typed;
+  ui.sdraft = {date:row.entry_date, item:nm};
+  toast(`Tersimpan: ${STYPES[t].label.toLowerCase()} ${fq(row.qty,unit)} ${nm}${sup?'':'. Bahan baru masuk ke daftar.'}`);
+  render(); updateHeader(); sync();
+}
+
+function openSupplies(){
+  const d = derived(), s = supplyStock();
+  const list = d.supplies.slice().sort((a,b)=>a.name.localeCompare(b.name,'id')).map(x => {
+    const anyUse = d.sAll.some(e=>e.supply_id===x.id), r = s[x.id] || {stok:0};
+    const dis = x._p ? 'aria-disabled="true"' : '';
+    return `<div class="fr"><div class="fr-t"><strong>${esc(x.name)}</strong>${x.hidden?'<span class="badge b-koreksi">Disembunyikan</span>':''}${x._p?'<span class="badge b-pend">Belum terkirim</span>':''}<span class="hint">satuan ${esc(x.unit)}, stok ${fq(r.stok,x.unit)}${x.min_stock!=null?', minimum '+fq(Number(x.min_stock),x.unit):''}</span></div>
+      <div class="row" style="justify-content:flex-start">
+        <button type="button" class="btn sm" data-act="sup-edit" data-sid="${esc(x.id)}" ${dis}>Ubah</button>
+        <button type="button" class="btn sm" data-act="sup-hide" data-sid="${esc(x.id)}" ${dis}>${x.hidden?'Tampilkan':'Sembunyikan'}</button>
+        ${isMgr()?`<button type="button" class="btn sm danger" data-act="sup-del" data-sid="${esc(x.id)}" ${anyUse||x._p?'aria-disabled="true" title="Sudah dipakai di catatan"':''}>Hapus</button>`:''}
+      </div></div>`;
+  }).join('');
+  openDlg(`<div class="dl"><h2>Daftar bahan dan kemasan</h2>
+    <p>Tambah, ubah, atau sembunyikan bahan kapan saja. Bahan yang disembunyikan tidak muncul di pilihan Catat, tetapi riwayatnya tetap ada. Isi batas minimum agar aplikasi memberi tanda saat stok menipis.</p>
+    <form id="f-sup-add" class="form" novalidate>
+      <div class="field"><label for="a-name">Nama bahan baru</label><input id="a-name" name="name" type="text" autocomplete="off" placeholder="Contoh: Cup plastik 16 oz"></div>
+      <div class="field"><label for="a-unit">Satuan</label><select id="a-unit" name="unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select></div>
+      <div class="field"><label for="a-min">Batas stok minimum, boleh kosong</label><input id="a-min" name="min" type="number" inputmode="decimal" min="0" step="any"></div>
+      <div id="a-err"></div>
+      <button class="btn pri" type="submit">Tambah bahan</button>
+    </form>
+    <div class="fl2">${list || '<p class="hint">Belum ada bahan. Tambahkan di atas.</p>'}</div>
+    <div class="row"><button class="btn ghost" type="button" data-act="close">Tutup</button></div></div>`);
+}
+function submitAddSupply(form){
+  const fd = new FormData(form), name = normName(fd.get('name')), unit = String(fd.get('unit')||'pcs'), err = $('#a-err');
+  const mn = parseFloat(String(fd.get('min')||'').replace(',','.'));
+  if(!name){ err.innerHTML = '<div class="err" role="alert">Isi nama bahan.</div>'; return; }
+  if(findSupply(name)){ err.innerHTML = '<div class="err" role="alert">Bahan ini sudah ada di daftar.</div>'; return; }
+  enqueue({k:'supply', row:{id:uuid(), name, unit, min_stock:isFinite(mn)&&mn>=0?mn:null}});
+  toast(`${name} ditambahkan`); ui.dirty = true; openSupplies(); sync();
+}
+function openSupplyEdit(sid){
+  const x = derived().smap[sid]; if(!x) return;
+  openDlg(`<form id="f-sup-edit" class="dl" data-sid="${esc(sid)}" novalidate><h2>Ubah ${esc(x.name)}</h2>
+    <div class="field"><label for="e-name">Nama</label><input id="e-name" name="name" type="text" autocomplete="off" value="${esc(x.name)}"></div>
+    <div class="field"><label for="e-unit">Satuan</label><select id="e-unit" name="unit">${(UNITS.includes(x.unit)?UNITS:UNITS.concat(x.unit)).map(u=>`<option ${u===x.unit?'selected':''}>${esc(u)}</option>`).join('')}</select>
+      <p class="hint">Mengubah satuan hanya mengganti labelnya. Angka lama tidak dikonversi.</p></div>
+    <div class="field"><label for="e-min">Batas stok minimum, boleh kosong</label><input id="e-min" name="min" type="number" inputmode="decimal" min="0" step="any" value="${x.min_stock==null?'':esc(x.min_stock)}"></div>
+    <div id="e-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="supplies">Batal</button><button class="btn pri" type="submit">Simpan</button></div></form>`);
+}
+async function submitSupplyEdit(form){
+  const sid = form.dataset.sid, fd = new FormData(form), x = derived().smap[sid]; if(!x) return;
+  const name = normName(fd.get('name')), unit = String(fd.get('unit')||x.unit), mn = parseFloat(String(fd.get('min')||'').replace(',','.'));
+  if(!name){ $('#e-err').innerHTML = '<div class="err" role="alert">Isi nama bahan.</div>'; return; }
+  if(derived().supplies.some(o=>o.id!==sid && o.name.toLowerCase()===name.toLowerCase())){ $('#e-err').innerHTML = '<div class="err" role="alert">Nama itu sudah dipakai bahan lain.</div>'; return; }
+  const ok = await mgmt(async()=>{
+    const rows = await patchRow('/rest/v1/supplies?id=eq.'+encodeURIComponent(sid)+'&select=id,name,unit,min_stock,hidden', {name, unit, min_stock:isFinite(mn)&&mn>=0?mn:null});
+    st.supplies = st.supplies.map(o=>o.id===sid?rows[0]:o); saveCache(); bump();
+  }, 'Perubahan tersimpan', '#e-err');
+  if(ok){ ui.dirty = true; openSupplies(); }
+}
+async function toggleSHide(sid){
+  const x = derived().smap[sid]; if(!x) return;
+  const ok = await mgmt(async()=>{
+    const rows = await patchRow('/rest/v1/supplies?id=eq.'+encodeURIComponent(sid)+'&select=id,name,unit,min_stock,hidden', {hidden:!x.hidden});
+    st.supplies = st.supplies.map(o=>o.id===sid?rows[0]:o); saveCache(); bump();
+  });
+  if(ok){ ui.dirty = true; openSupplies(); }
+}
+async function deleteSupply(sid){
+  const x = derived().smap[sid]; if(!x) return;
+  const ok = await mgmt(async()=>{
+    const r = await api('/rest/v1/supplies?id=eq.'+encodeURIComponent(sid), {method:'DELETE', headers:{Prefer:'return=representation'}});
+    if(!r.ok) throw await failure(r);
+    const rows = await r.json(); if(!rows.length) throw new Error(FRIENDLY['42501']);
+    st.supplies = st.supplies.filter(o=>o.id!==sid); saveCache(); bump();
+  }, x.name+' dihapus');
+  if(ok){ ui.dirty = true; openSupplies(); }
+}
+function openSOpname(sid){
+  const x = derived().smap[sid]; if(!x) return;
+  const sys = (supplyStock()[sid]||{stok:0}).stok;
+  openDlg(`<form id="f-sopname" class="dl" data-sid="${esc(sid)}" novalidate><h2>Hitung fisik ${esc(x.name)}</h2>
+    <p>Stok di sistem saat ini ${fq(sys,x.unit)}. Masukkan hasil hitung di tempat penyimpanan. Selisihnya dicatat sebagai koreksi opname.</p>
+    <div class="field"><label for="so-qty">Stok fisik (${esc(x.unit)})</label><div class="kg"><input id="so-qty" name="qty" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><span>${esc(x.unit)}</span></div></div>
+    <div id="so-err"></div>
+    <div class="row"><button type="button" class="btn ghost" data-act="close">Batal</button><button class="btn pri" type="submit">Simpan koreksi</button></div></form>`);
+}
+function submitSOpname(form){
+  const sid = form.dataset.sid, x = derived().smap[sid]; if(!x) return;
+  const phys = parseFloat(String(new FormData(form).get('qty')||'').replace(',','.')), err = $('#so-err');
+  if(!isFinite(phys) || phys<0){ err.innerHTML = '<div class="err" role="alert">Isi stok fisik, minimal 0.</div>'; return; }
+  const sys = (supplyStock()[sid]||{stok:0}).stok, delta = Math.round((phys-sys)*100)/100;
+  dlg.close();
+  if(delta===0){ toast('Stok fisik sama dengan stok di sistem.'); return; }
+  enqueue({k:'sentry', rows:[{id:uuid(), entry_date:todayStr(), type:'koreksi', supply_id:sid, qty:delta, price:null, note:`Opname: fisik ${fq(phys,x.unit)}, sistem ${fq(sys,x.unit)}`, created_by:st.me.id}]});
+  toast(`Koreksi ${sfq(delta,x.unit)} untuk ${x.name} tersimpan`);
+  render(); updateHeader(); sync();
+}
+
+function keepForm(fn){
+  const f = $('#f') || $('#f-sup');
+  const fid = f ? f.id : null;
+  const snap = f ? Array.from(new FormData(f).entries()) : null;
+  fn();
+  const nf2 = fid ? document.getElementById(fid) : null;
+  if(snap && nf2) snap.forEach(([k,v]) => { if(k==='fruit' || k==='item') return; const el = nf2.elements[k]; if(el && 'value' in el) el.value = v; });
+  updateYield();
+}
+const TAB_ICONS = {
+  stok:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+  catat:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  laporan:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  riwayat:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  bahan:'<path d="M5 4h14l-2 16H7L5 4z"/><path d="M6 9h12"/>',
+  staf:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2 .6 3.5 2.4 3.5 6"/>'
+};
+const TAB_LABEL = {stok:'Stok', catat:'Catat', bahan:'Bahan', laporan:'Laporan', riwayat:'Riwayat', staf:'Staf'};
+function tabsForRole(){ const t = ['stok','catat','bahan','laporan','riwayat']; if(isMgr()) t.push('staf'); return t; }
+function updateNav(){
+  const nav = $('#nav');
+  nav.innerHTML = tabsForRole().map(k=>`<button data-act="tab" data-v="${k}" aria-current="${k===ui.tab?'page':'false'}"><svg viewBox="0 0 24 24">${TAB_ICONS[k]}</svg>${TAB_LABEL[k]}</button>`).join('');
+}
+function render(){
+  if(!st.me) return;
+  if(!tabsForRole().includes(ui.tab)) ui.tab = 'stok';
+  app.innerHTML = {stok:viewStok, catat:viewCatat, bahan:viewBahan, laporan:viewLaporan, riwayat:viewRiwayat, staf:viewStaf}[ui.tab]();
+  updateNav();
+  $('#ttl').textContent = {stok:'Stok buah', catat:'Catat buah', bahan:'Bahan dan kemasan', laporan:'Laporan bulanan', riwayat:'Riwayat', staf:'Kelola staf'}[ui.tab];
+  updateYield();
+  updateHeader();
+}
+function updateHeader(){
+  const el = $('#sync'), av = $('#acct'); if(!el) return;
+  const n = st.queue.length;
+  let t, c;
+  if(st.rejected.length){ t = st.rejected.length+' ditolak'; c = 'bad'; }
+  else if(st.syncing){ t = 'Menyinkronkan'; c = 'mid'; }
+  else if(isOffline()){ t = n ? 'Offline, '+n+' belum terkirim' : 'Offline'; c = 'bad'; }
+  else if(n){ t = n+' belum terkirim'; c = 'mid'; }
+  else { t = 'Tersinkron'; c = 'ok'; }
+  el.textContent = t; el.className = 'chip-s '+c;
+  av.textContent = st.me ? initials(st.me.full_name) : '?';
+}
+function enterApp(){
+  setShell(true); render(); startTimers();
+}
+
+/* =====================================================================
+   Login, logout, mulai sesi
+   ===================================================================== */
+async function doLogin(form){
+  const fd = new FormData(form);
+  const email = String(fd.get('email')||'').trim().toLowerCase(), pw = String(fd.get('password')||'');
+  const err = $('#l-err');
+  if(!email || !pw){ err.innerHTML = '<div class="err" role="alert">Isi email dan kata sandi.</div>'; return; }
+  if(!navigator.onLine){ err.innerHTML = '<div class="err" role="alert">Butuh internet untuk login.</div>'; return; }
+  const btn = form.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Masuk...';
+  let res;
+  try{ res = await fetch(SB_URL+'/auth/v1/token?grant_type=password', {method:'POST', headers:{apikey:SB_KEY,'Content-Type':'application/json'}, body:JSON.stringify({email, password:pw})}); }
+  catch(e){ btn.disabled = false; btn.textContent = 'Masuk'; err.innerHTML = '<div class="err" role="alert">Tidak ada koneksi ke server. Coba lagi.</div>'; return; }
+  if(!res.ok){
+    btn.disabled = false; btn.textContent = 'Masuk';
+    let j = {}; try{ j = await res.json(); }catch(e){}
+    const banned = j.error_code==='user_banned' || /banned/i.test(j.msg||j.message||'');
+    const text = banned ? 'Akun ini dinonaktifkan. Hubungi manager.' : (res.status===400||res.status===401 ? 'Email atau kata sandi salah.' : 'Gagal masuk (kode '+res.status+'). Coba lagi.');
+    err.innerHTML = `<div class="err" role="alert">${esc(text)}</div>`;
+    return;
+  }
+  setSession(await res.json());
+  await startSession();
+}
+async function startSession(){
+  st.me = null; st.profiles = []; st.fruits = []; st.entries = new Map(); st.settings = {waste_target:null};
+  st.cursor = 0; st.lastSync = 0; st.netFail = false; st.ready = false;
+  st.supplies = []; st.sEntries = new Map(); st.sCursor = 0; st.migrated = true;
+  const cached = loadLocal();
+  if(cached && st.me){ st.ready = true; enterApp(); sync(); return; }
+  showLoading();
+  await sync();
+  if(st.me && st.me.active){ st.ready = true; enterApp(); }
+  else if(st.me){ renderBlocked(); }
+  else if(isOffline()){ showFatal('Tidak bisa memuat data. Periksa koneksi internet, lalu coba lagi.'); }
+  else if(st.session){ renderBlocked('Akunmu belum terdaftar sebagai staf. Hubungi manager.'); }
+}
+async function doLogout(){
+  if(st.queue.length){
+    const ok = await ask('Keluar sekarang?', `Masih ada ${st.queue.length} catatan yang belum terkirim. Catatan itu tetap tersimpan di perangkat ini dan terkirim saat kamu login lagi dengan akun yang sama.`, 'Tetap keluar');
+    if(!ok) return;
+  }
+  if(dlg.open) dlg.close();
+  try{ await api('/auth/v1/logout', {method:'POST'}); }catch(e){}
+  LS.del(ck()); LS.del('sb.session');
+  st.session = null; st.ready = false; st.me = null;
+  showLogin();
+}
+
+/* =====================================================================
+   Event
+   ===================================================================== */
+document.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-act]'); if(!b) return;
+  const a = b.dataset.act, v = b.dataset.v;
+  if(a==='tab'){ ui.tab = v; render(); window.scrollTo(0,0); }
+  else if(a==='type'){ ui.type = v; render(); }
+  else if(a==='month'){ ui.month = addMonths(ui.month, Number(v)); render(); }
+  else if(a==='filter'){ ui.filter = v; render(); }
+  else if(a==='sync'){
+    if(st.rejected.length) openRejected(); else { if(dlg.open && b.closest('dialog')) { /* tetap di dialog */ } sync(true); }
+  }
+  else if(a==='account'){ openAccount(); }
+  else if(a==='logout'){ doLogout(); }
+  else if(a==='retry'){ if(st.session){ startSession(); } else showLogin(); }
+  else if(a==='close'){ dlg.close(); }
+  else if(a==='rej-clear'){ st.rejected = []; saveQueue(); dlg.close(); updateHeader(); }
+  else if(a==='opname'){ openOpname(b.dataset.fid); }
+  else if(a==='fruits'){ openFruits(); }
+  else if(a==='fruit-ren'){ if(b.getAttribute('aria-disabled')==='true'){ toast('Tunggu sampai buah ini terkirim ke server.'); return; } openRename(b.dataset.fid); }
+  else if(a==='fruit-hide'){ if(b.getAttribute('aria-disabled')==='true'){ toast('Tunggu sampai buah ini terkirim ke server.'); return; } toggleHide(b.dataset.fid); }
+  else if(a==='fruit-del'){
+    if(b.getAttribute('aria-disabled')==='true'){ toast('Buah ini sudah dipakai di catatan. Sembunyikan saja kalau tidak dipakai lagi.'); return; }
+    deleteFruit(b.dataset.fid);
+  }
+  else if(a==='pick-fruit'){
+    const i = $('#f-fruit');
+    if(i){ i.value = b.dataset.fruit; ui.draft.fruit = b.dataset.fruit;
+      document.querySelectorAll('[data-act="pick-fruit"]').forEach(x => x.setAttribute('aria-pressed', x===b ? 'true' : 'false')); }
+  }
+  else if(a==='settings'){ openSettings(); }
+  else if(a==='sub'){ ui.sub = v; render(); }
+  else if(a==='stype'){ ui.stype = v; render(); }
+  else if(a==='goto-bahan'){ ui.tab = 'bahan'; ui.sub = 'stok'; render(); window.scrollTo(0,0); }
+  else if(a==='supplies'){ openSupplies(); }
+  else if(a==='sup-edit'){ if(b.getAttribute('aria-disabled')==='true'){ toast('Tunggu sampai bahan ini terkirim ke server.'); return; } openSupplyEdit(b.dataset.sid); }
+  else if(a==='sup-hide'){ if(b.getAttribute('aria-disabled')==='true'){ toast('Tunggu sampai bahan ini terkirim ke server.'); return; } toggleSHide(b.dataset.sid); }
+  else if(a==='sup-del'){
+    if(b.getAttribute('aria-disabled')==='true'){ toast('Bahan ini sudah dipakai di catatan. Sembunyikan saja kalau tidak dipakai lagi.'); return; }
+    deleteSupply(b.dataset.sid);
+  }
+  else if(a==='s-opname'){ openSOpname(b.dataset.sid); }
+  else if(a==='pick-item'){
+    const i = $('#s-item');
+    if(i){ i.value = b.dataset.item; ui.sdraft.item = b.dataset.item; updateUnitLabel();
+      document.querySelectorAll('[data-act="pick-item"]').forEach(x => x.setAttribute('aria-pressed', x===b ? 'true' : 'false')); }
+  }
+  else if(a==='sdel'){
+    const e = derived().sAll.find(x=>x.id===b.dataset.id); if(!e) return;
+    const ok = await ask('Hapus catatan ini?', `${STYPES[e.type].label} ${e.type==='koreksi'?sfq(Number(e.qty),sUnit(e.supply_id)):fq(Number(e.qty),sUnit(e.supply_id))} ${sName(e.supply_id)}, ${dateLabel(e.entry_date)}. Stok akan dihitung ulang.`, 'Hapus');
+    if(!ok) return;
+    const pendOp = st.queue.find(o => o.k==='sentry' && o.rows.some(r=>r.id===e.id));
+    if(pendOp){
+      pendOp.rows = pendOp.rows.filter(r=>r.id!==e.id);
+      if(!pendOp.rows.length) st.queue = st.queue.filter(o=>o!==pendOp);
+      saveQueue();
+    } else { enqueue({k:'sdel', id:e.id, at:new Date().toISOString()}); }
+    toast('Catatan dihapus'); render(); updateHeader(); sync();
+  }
+  else if(a==='legacy'){ importLegacy(); }
+  else if(a==='export-csv'){ exportCsv(); }
+  else if(a==='genpw'){ const i = $(b.dataset.t); if(i) i.value = genPw(); }
+  else if(a==='staff-new'){ openStaffNew(); }
+  else if(a==='staff-edit'){ openStaffEdit(b.dataset.id); }
+  else if(a==='staff-pw'){ openStaffPw(b.dataset.id); }
+  else if(a==='staff-active'){
+    const p = st.profiles.find(x=>x.id===b.dataset.id); if(!p) return;
+    const next = !p.active;
+    const ok = await ask(next?'Aktifkan akun ini?':'Nonaktifkan akun ini?', next?`${p.full_name} bisa login dan mencatat lagi.`:`${p.full_name} tidak bisa login lagi. Riwayat catatannya tetap tersimpan.`, next?'Aktifkan':'Nonaktifkan');
+    if(ok){ const done = await mgmt(async()=>{ await staffCall({action:'set_active', id:p.id, active:next}); await pull(); }, next?'Akun diaktifkan':'Akun dinonaktifkan'); if(done) render(); }
+  }
+  else if(a==='staff-del'){
+    const p = st.profiles.find(x=>x.id===b.dataset.id); if(!p) return;
+    const ok = await ask('Hapus akun ini?', `Akun ${p.full_name} dihapus permanen. Staf yang sudah punya catatan tidak bisa dihapus, nonaktifkan saja.`, 'Hapus akun');
+    if(ok){ const done = await mgmt(async()=>{ await staffCall({action:'delete', id:p.id}); await pull(); }, 'Akun dihapus'); if(done) render(); }
+  }
+  else if(a==='del'){
+    const e = derived().all.find(x=>x.id===b.dataset.id); if(!e) return;
+    const ok = await ask('Hapus catatan ini?', `${TYPES[e.type].label} ${e.type==='koreksi'?skg(Number(e.kg)):kg(Number(e.kg))} ${fruitName(e.fruit_id)}, ${dateLabel(e.entry_date)}. Stok akan dihitung ulang.`, 'Hapus');
+    if(!ok) return;
+    const pendOp = st.queue.find(o => o.k==='entry' && o.rows.some(r=>r.id===e.id));
+    if(pendOp){
+      pendOp.rows = pendOp.rows.filter(r=>r.id!==e.id);
+      if(!pendOp.rows.length) st.queue = st.queue.filter(o=>o!==pendOp);
+      saveQueue();
+    } else { enqueue({k:'del', id:e.id, at:new Date().toISOString()}); }
+    toast('Catatan dihapus'); render(); updateHeader(); sync();
+  }
+});
+document.addEventListener('submit', ev => {
+  const f = ev.target;
+  if(f.method==='dialog') return;
+  ev.preventDefault();
+  const id = f.id;
+  if(id==='f-login') doLogin(f);
+  else if(id==='f') submitEntry(f);
+  else if(id==='f-sup') submitSupply(f);
+  else if(id==='f-sup-add') submitAddSupply(f);
+  else if(id==='f-sup-edit') submitSupplyEdit(f);
+  else if(id==='f-sopname') submitSOpname(f);
+  else if(id==='f-opname') submitOpname(f);
+  else if(id==='f-fruit-add') submitAddFruit(f);
+  else if(id==='f-fruit-ren') submitRename(f);
+  else if(id==='f-set') submitSettings(f);
+  else if(id==='f-pw') submitPw(f);
+  else if(id==='f-staff-new') submitStaffNew(f);
+  else if(id==='f-staff-edit') submitStaffEdit(f);
+  else if(id==='f-staff-pw') submitStaffPw(f);
+});
+document.addEventListener('change', ev => {
+  const t = ev.target;
+  if(t.id==='m'){ if(t.value) ui.month = t.value; render(); }
+  else if(t.id==='f-date') ui.draft.date = t.value;
+  else if(t.id==='f-fruit') ui.draft.fruit = t.value;
+  else if(t.id==='s-date') ui.sdraft.date = t.value;
+  else if(t.id==='s-item'){ ui.sdraft.item = t.value; updateUnitLabel(); }
+});
+
+document.addEventListener('input', ev => {
+  const id = ev.target.id;
+  if(id==='f-kg' || id==='f-net') updateYield();
+  else if(id==='s-item') updateUnitLabel();
+});
+
+let timersOn = false;
+function startTimers(){
+  if(timersOn) return; timersOn = true;
+  setInterval(() => { if(st.session && st.ready && document.visibilityState==='visible') sync(); }, POLL_MS);
+}
+window.addEventListener('online', () => { st.netFail = false; updateHeader(); if(st.session && st.ready) sync(); });
+window.addEventListener('offline', () => updateHeader());
+document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible' && st.session && st.ready) sync(); });
+
+/* =====================================================================
+   Mulai
+   ===================================================================== */
+(function boot(){
+  const s = LS.get('sb.session', null);
+  if(!s || !s.user || !s.refresh_token){ showLogin(); }
+  else { st.session = s; startSession(); }
+  if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+})();
+})();
+</script>
+</body>
+</html>
