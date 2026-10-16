@@ -1,5 +1,5 @@
-const CACHE = 'stokbuah-v5';
-const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'stokbuah-v9';
+const FILES = ['./', 'index.html', 'css/base.css', 'css/dashboard.css', 'manifest.webmanifest', 'img/logo-full.png', 'img/logo-mark.png', 'img/favicon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
