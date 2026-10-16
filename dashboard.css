@@ -13,7 +13,7 @@
   /* Sidebar dengan logo */
   .tabs{left:0;right:auto;top:0;bottom:0;width:var(--side-w);max-width:none;margin:0;border-radius:0;border:0;
         background:var(--side);box-shadow:none;flex-direction:column;justify-content:flex-start;gap:2px;padding:104px 14px 16px;z-index:30}
-  .tabs::before{content:"";position:absolute;left:14px;right:14px;top:18px;height:70px;border-radius:14px;background:#fff url(../img/logo-full.png) center/contain no-repeat;background-origin:content-box;padding:8px 10px}
+  .tabs::before{content:"";position:absolute;left:14px;right:14px;top:18px;height:70px;border-radius:14px;background:#fff url(logo-full.png) center/contain no-repeat;background-origin:content-box;padding:8px 10px}
   .tabs button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;min-height:44px;padding:0 14px;border-radius:10px;
         font-size:14px;color:var(--side-ink);transition:background .12s,color .12s}
   .tabs svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.8}
