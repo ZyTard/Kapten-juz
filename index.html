@@ -142,7 +142,7 @@ class NetErr extends Error { constructor(m){ super(m||'offline'); this.net = tru
 const st = {
   session:null, me:null, profiles:[], fruits:[], entries:new Map(), settings:{waste_target:null},
   cursor:0, sCursor:0, supplies:[], sEntries:new Map(), migrated:true, migrated2:false, lastSync:0, queue:[], rejected:[],
-  syncing:false, again:false, netFail:false, ready:false, ver:0, reviews:[], migrated5:false, migrated6:false
+  syncing:false, again:false, netFail:false, ready:false, ver:0, reviews:[], migrated5:false, migrated6:false, migrated7:false
 };
 const ui = {tab:'stok', type:'masuk', month:thisMonth(), filter:'semua', draft:{date:todayStr(), fruit:''}, dirty:false, sub:'stok', stype:'masuk', sdraft:{date:todayStr(), item:''}, rsub:'buah', tmode:'minggu', q:{stok:'', bahan:'', riwayat:''}, day:todayStr(), started:false, dest:'', unit:{}, su:'kg'};
 // Satuan terakhir yang dipakai di form dan tampilan stok (kg atau gram), per perangkat
@@ -152,7 +152,7 @@ function saveUnits(){ try{ localStorage.setItem('sb.units', JSON.stringify({unit
 const uidNow = () => st.session ? st.session.user.id : '';
 const ck = () => 'sb.cache.'+uidNow(), qk = () => 'sb.queue.'+uidNow(), rk = () => 'sb.rej.'+uidNow();
 function saveCache(){
-  LS.set(ck(), {me:st.me, profiles:st.profiles, fruits:st.fruits, settings:st.settings, cursor:st.cursor, lastSync:st.lastSync, entries:Array.from(st.entries.values()), supplies:st.supplies, sCursor:st.sCursor, migrated:st.migrated, migrated2:st.migrated2, sEntries:Array.from(st.sEntries.values()), reviews:st.reviews, migrated5:st.migrated5, migrated6:st.migrated6});
+  LS.set(ck(), {me:st.me, profiles:st.profiles, fruits:st.fruits, settings:st.settings, cursor:st.cursor, lastSync:st.lastSync, entries:Array.from(st.entries.values()), supplies:st.supplies, sCursor:st.sCursor, migrated:st.migrated, migrated2:st.migrated2, sEntries:Array.from(st.sEntries.values()), reviews:st.reviews, migrated5:st.migrated5, migrated6:st.migrated6, migrated7:st.migrated7});
 }
 function saveQueue(){ LS.set(qk(), st.queue); LS.set(rk(), st.rejected); st.ver++; }
 function bump(){ st.ver++; }
@@ -164,7 +164,7 @@ function loadLocal(){
     st.entries = new Map((c.entries||[]).map(e=>[e.id,e]));
     st.supplies = c.supplies||[]; st.sCursor = c.sCursor||0; st.migrated = c.migrated!==false; st.migrated2 = c.migrated2===true;
     st.sEntries = new Map((c.sEntries||[]).map(e=>[e.id,e]));
-    st.reviews = c.reviews||[]; st.migrated5 = c.migrated5===true; st.migrated6 = c.migrated6===true;
+    st.reviews = c.reviews||[]; st.migrated5 = c.migrated5===true; st.migrated6 = c.migrated6===true; st.migrated7 = c.migrated7===true;
   }
   st.queue = LS.get(qk(), []); st.rejected = LS.get(rk(), []);
   bump();
@@ -179,9 +179,13 @@ const isOwner = () => myRole()==='owner';
 const canParaf = () => myRole()==='manager' || myRole()==='owner';
 const canOversee = () => canManage() || isOwner();
 /* ---------- Satuan buah: berat (kg) atau pcs ---------- */
-const isPcs = f => !!f && st.migrated6 && f.unit==='pcs' && Number(f.pcs_weight)>0;
-const pcsKg = f => Number(f.pcs_weight)/1000;                      // berat rata-rata 1 pcs dalam kg
-const pcsOf = (e, f) => e.pcs!=null ? Number(e.pcs) : Number(e.kg)/pcsKg(f);
+// Buah pcs: berat rata-rata per pcs opsional (setelah 7-update.sql). Tanpa berat rata-rata,
+// catatan yang tidak ditimbang tidak punya berat dan buah itu dihitung per pcs saja.
+const hasW = f => !!f && Number(f.pcs_weight)>0;
+const isPcs = f => !!f && st.migrated6 && f.unit==='pcs' && (hasW(f) || st.migrated7);
+const pcsKg = f => hasW(f) ? Number(f.pcs_weight)/1000 : null;    // berat rata-rata 1 pcs dalam kg
+const pcsOf = (e, f) => e.pcs!=null ? Number(e.pcs) : (hasW(f) && e.kg!=null ? Number(e.kg)/pcsKg(f) : 0);
+const qtyLbl = e => e.pcs!=null ? (e.type==='koreksi'?spcs(Number(e.pcs)):fpcs(Number(e.pcs))) : (e.type==='koreksi'?skg(Number(e.kg)):kg(Number(e.kg)));
 const fpcs = n => nf.format(Math.round(n*100)/100)+' pcs';
 const spcs = n => (n>0?'+':n<0?'\u2212':'')+fpcs(Math.abs(n));
 const bks = n => nf1.format(Math.round(n/FROZEN_PACK*10)/10)+' bungkus';
@@ -358,7 +362,7 @@ function monthStats(m){
 }
 function detail(e){
   const p = [];
-  if(e.pcs!=null && e.type!=='koreksi') p.push(kg(Number(e.kg)));
+  if(e.pcs!=null && e.type!=='koreksi' && e.kg!=null) p.push(kg(Number(e.kg)));
   if(e.type==='masuk'){ if(e.price) p.push(rp(e.price)+'/kg'); if(e.origin) p.push(e.origin); }
   if(e.type==='produksi' || e.type==='frozen'){ if(e.kg_net!=null){ const n = Number(e.kg_net), g = Number(e.kg); p.push('bersih '+kg(n)+', hasil '+pct(g>0?n/g*100:0)); } if(e.type==='produksi' && e.menu) p.push(e.menu); }
   if(e.type==='eceran' && e.price) p.push(rp(e.price)+'/kg');
@@ -384,7 +388,7 @@ function remapFruit(oldId, newId){
 async function sendOp(op){
   if(op.k==='fruit'){
     const body = {id:op.row.id, name:op.row.name};
-    if(st.migrated6 && op.row.unit==='pcs'){ body.unit = 'pcs'; body.pcs_weight = op.row.pcs_weight; }
+    if(st.migrated6 && op.row.unit==='pcs'){ body.unit = 'pcs'; body.pcs_weight = op.row.pcs_weight==null ? null : op.row.pcs_weight; }
     const r = await api('/rest/v1/fruits?on_conflict=id', {method:'POST', headers:{Prefer:'resolution=ignore-duplicates,return=minimal'}, body});
     if(r.ok) return;
     const e = await failure(r);
@@ -436,7 +440,7 @@ function describeOp(op){
     if(op.rows.every(r=>r.type==='koreksi')) return op.rows.length+' koreksi opname';
     return op.rows.length+' catatan impor';
   }
-  const r = op.rows[0]; return TYPES[r.type].label+' '+kg(Number(r.kg))+' '+fruitName(r.fruit_id);
+  const r = op.rows[0]; return TYPES[r.type].label+' '+qtyLbl(r)+' '+fruitName(r.fruit_id);
 }
 let flushing = false;
 async function flush(){
@@ -466,6 +470,11 @@ async function pull(){
   let fruits;
   try{ fruits = await jget('/rest/v1/fruits?select=id,name,hidden,unit,pcs_weight&order=name.asc'); st.migrated6 = true; }
   catch(e){ if(e.net || e.auth) throw e; fruits = await jget('/rest/v1/fruits?select=id,name,hidden&order=name.asc'); st.migrated6 = false; }
+  // 7-update.sql: berat rata-rata pcs opsional (catatan buah pcs boleh tanpa berat)
+  if(st.migrated6 && !st.migrated7){
+    try{ const r = await api('/rest/v1/rpc/db_features', {method:'POST', body:{}}); if(r.ok){ const j = await r.json(); st.migrated7 = !!(j && j.pcs_tanpa_berat); } }
+    catch(e){ if(e.net || e.auth) throw e; }
+  }
   const from = st.cursor ? new Date(st.cursor-300000).toISOString() : null;
   let off = 0, maxMs = st.cursor||0;
   for(;;){
@@ -655,11 +664,11 @@ function viewStok(){
     const P = isPcs(f), main = P ? fpcs(r.stokPcs) : wt(r.stok), dp = dapurM[f.id];
     return `<details class="sr ${neg||fneg?'neg':''} ${empty?'zero':''}">
       <summary><span class="sr-n">${esc(f.name)}</span>
-        <span class="sr-v"><b>${main}</b>${P?`<small class="sr-k">\u2248 ${wt(r.stok)}</small>`:''}${hasF?`<small>${wt(r.freezer)} beku, ${bks(Math.max(0,r.freezer))}</small>`:''}</span>${pill}
+        <span class="sr-v"><b>${main}</b>${P&&hasW(f)?`<small class="sr-k">\u2248 ${wt(r.stok)}</small>`:''}${hasF?`<small>${wt(r.freezer)} beku, ${bks(Math.max(0,r.freezer))}</small>`:''}</span>${pill}
         <svg class="sr-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
       <div class="sr-d">
       ${r.stok>0?`<div class="lvl" role="img" aria-label="Stok ${esc(f.name)} dibanding buah lain"><i style="width:${Math.max(3,Math.min(100,r.stok/maxS*100)).toFixed(1)}%"></i></div>`:''}
-      ${P?`<p class="hint">Dihitung per pcs (1 pcs \u2248 ${nf.format(Number(f.pcs_weight))} g). Stok gudang sekitar ${wt(r.stok)}.</p>`:''}
+      ${P?`<p class="hint">${hasW(f)?`Dihitung per pcs (1 pcs \u2248 ${nf.format(Number(f.pcs_weight))} g). Stok gudang sekitar ${wt(r.stok)}.`:'Dihitung per pcs tanpa berat rata-rata. Berat hanya tercatat dari catatan yang ditimbang.'}</p>`:''}
       ${hasF?`<p class="stk frz"><strong>${wt(r.freezer)}</strong> di freezer (bersih), sekitar ${bks(Math.max(0,r.freezer))}</p>`:''}
       ${dp && (dp.segar||dp.beku)?`<p class="hint">Masuk dapur ${esc(monthLabel(thisMonth()))} (bersih): segar ${wt(dp.segar)} + dari freezer ${wt(dp.beku)} = <b>${wt(dp.segar+dp.beku)}</b></p>`:''}
       ${fneg?'<p class="warn">Stok freezer minus. Ada catatan dari freezer yang belum punya catatan ke freezer.</p>':''}
@@ -732,7 +741,7 @@ function toKg(v, u, f){
   if(!isFinite(v)) return NaN;
   if(u==='g') return v/1000;
   if(u==='bks') return v*FROZEN_PACK;
-  if(u==='pcs') return f && isPcs(f) ? v*pcsKg(f) : NaN;
+  if(u==='pcs') return f && isPcs(f) ? (hasW(f) ? v*pcsKg(f) : null) : NaN;
   return v;
 }
 // Berat kotor (kg) di form: pcs dikonversi, kecuali berat sebenarnya diisi
@@ -754,7 +763,7 @@ function viewCatat(){
   const quick = quickFruits().map(n=>`<button type="button" class="chip" data-act="pick-fruit" data-fruit="${esc(n)}" aria-pressed="${n===d.fruit}">${esc(n)}</button>`).join('');
   const uo = unitOpts(t, f0), uSel = uo.some(o=>o[0]===ui.unit[t]) ? ui.unit[t] : uo[0][0];
   const qtyLabel = {masuk:'Jumlah masuk', kupas:'Buah kotor yang dikupas', dari_freezer:'Diambil dari freezer', eceran:'Terjual eceran', waste:'Jumlah waste'}[t];
-  const actField = t==='dari_freezer' ? '' : `<div class="field" id="f-actw" ${isPcs(f0)?'':'hidden'}><label for="f-act">Berat sebenarnya (kg), boleh kosong</label>
+  const actField = t==='dari_freezer' ? '' : `<div class="field" id="f-actw" ${isPcs(f0)?'':'hidden'}><label for="f-act" id="f-act-l">Berat sebenarnya (kg), boleh kosong</label>
       <input id="f-act" name="act" type="number" inputmode="decimal" step="any" min="0" placeholder="Kosongkan kalau tidak ditimbang">
       <p class="hint" id="f-pcs-h"></p></div>`;
   let extra = '';
@@ -812,7 +821,10 @@ function updateQtyUnit(){
   }
   const pcs = t!=='dari_freezer' && isPcs(f);
   const aw = $('#f-actw'); if(aw) aw.hidden = !pcs;
-  const ph = $('#f-pcs-h'); if(ph) ph.textContent = pcs ? `${f.name} dihitung per pcs. 1 pcs dianggap ${nf.format(Number(f.pcs_weight))} g kalau berat sebenarnya kosong.` : '';
+  const needW = pcs && !hasW(f) && t==='kupas';
+  const ph = $('#f-pcs-h'); if(ph) ph.textContent = !pcs ? '' : hasW(f) ? `${f.name} dihitung per pcs. 1 pcs dianggap ${nf.format(Number(f.pcs_weight))} g kalau berat sebenarnya kosong.`
+    : needW ? `${f.name} belum punya berat rata-rata. Untuk kupas, timbang berat kotornya dan isi di sini (wajib).` : `${f.name} dihitung per pcs. Isi berat kalau ditimbang supaya ikut di waste % dan laporan.`;
+  const al = $('#f-act-l'); if(al) al.textContent = needW ? 'Berat kotor ditimbang (kg), wajib' : 'Berat sebenarnya (kg), boleh kosong';
   const pl = $('#f-price-l'); if(pl) pl.textContent = (t==='masuk'?'Harga beli':'Harga jual')+' per '+(pcs?'pcs':'kg')+' (Rp), boleh kosong';
 }
 function updateSplit(){
@@ -844,15 +856,20 @@ async function submitEntry(form){
   if(!isFinite(q) || q<=0) errs.push('Isi jumlah lebih dari 0.');
   else {
     if(pcsF){ const a = num('act'); if(isFinite(a) && a>0) kgv = a; }
-    if(!(kgv>0)) errs.push('Jumlah terlalu kecil. Periksa lagi angkanya.');
+    // Buah pcs tanpa berat rata-rata dan tidak ditimbang: kg kosong (hanya pcs). Kupas tetap butuh berat.
+    if(kgv==null){ if(t==='kupas') errs.push(`Timbang berat kotor ${known?known.name:'buah'} dan isi di kolom berat (wajib untuk kupas).`); }
+    else if(!(kgv>0)) errs.push('Jumlah terlalu kecil. Periksa lagi angkanya.');
     else if(kgv>99999) errs.push('Jumlah terlalu besar. Periksa lagi angkanya.');
   }
   const r2 = n => Math.round(n*100)/100;
-  const mk = (type, kgx, x) => Object.assign({id:uuid(), entry_date:date, type, fruit_id:null, kg:r2(kgx), price:null, origin:null, menu:null, category:null, stage:null, note:null, created_by:st.me.id}, x||{});
-  const priceIn = num('price'), price = isFinite(priceIn) && priceIn>=0 ? (pcsF && kgv>0 ? r2(priceIn*pcs/kgv) : priceIn) : null;
+  const mk = (type, kgx, x) => Object.assign({id:uuid(), entry_date:date, type, fruit_id:null, kg:kgx==null?null:r2(kgx), price:null, origin:null, menu:null, category:null, stage:null, note:null, created_by:st.me.id}, x||{});
+  // Harga disimpan per kg. Buah pcs tanpa berat: harga per pcs dicatat di kolom catatan.
+  const priceIn = num('price'), okP = isFinite(priceIn) && priceIn>=0;
+  const price = okP ? (pcsF ? (kgv>0 ? r2(priceIn*pcs/kgv) : null) : priceIn) : null;
+  const pNote = okP && pcsF && !(kgv>0) ? `Harga ${rp(priceIn)}/pcs` : null;
   let rows = [], net = null;
-  if(t==='masuk'){ const o = String(fd.get('origin')||'').trim(); rows = [mk('masuk', kgv, {price, origin:o||null, pcs})]; }
-  if(t==='eceran') rows = [mk('eceran', kgv, {price, pcs})];
+  if(t==='masuk'){ const o = String(fd.get('origin')||'').trim(); rows = [mk('masuk', kgv, {price, origin:o||null, pcs, note:pNote})]; }
+  if(t==='eceran') rows = [mk('eceran', kgv, {price, pcs, note:pNote})];
   if(t==='dari_freezer'){
     if(!st.migrated2) errs.push('Fitur freezer belum aktif. Minta manager menjalankan 4-update.sql di Supabase.');
     rows = [mk('dari_freezer', kgv, {note: u==='bks' ? `${nf.format(q)} bungkus` : null})];
@@ -868,7 +885,7 @@ async function submitEntry(form){
     net = toKg(num('net'), String(fd.get('nu')||'kg'), null);
     const dest = destOpts().includes(ui.dest) ? ui.dest : destOpts()[0], menu = String(fd.get('menu')||'').trim() || null;
     if(!isFinite(net) || net<=0) errs.push('Isi berat bersih setelah dikupas, lebih dari 0.');
-    else if(isFinite(kgv) && net>kgv+0.0001) errs.push('Berat bersih tidak boleh lebih besar dari berat kotor.');
+    else if(kgv!=null && isFinite(kgv) && net>kgv+0.0001) errs.push('Berat bersih tidak boleh lebih besar dari berat kotor.');
     if(!st.migrated) errs.push('Database belum diperbarui. Minta manager menjalankan 3-update.sql di Supabase.');
     if(dest!=='dapur' && !st.migrated2) errs.push('Fitur freezer belum aktif. Minta manager menjalankan 4-update.sql di Supabase.');
     if(!errs.length){
@@ -1243,7 +1260,7 @@ function viewRiwayat(){
   const rowsFor = list => list.slice(0,150).map(e=>`<div class="he ${e._p?'pend':''}"><div class="he-b">
       <div class="he-t"><span class="badge b-${e.type}">${esc(TYPES[e.type].label)}</span><strong>${esc(fruitName(e.fruit_id))}</strong>${e._p?'<span class="badge b-pend">Belum terkirim</span>':''}</div>
       <span class="he-d">${esc(dateLabel(e.entry_date))}, ${esc(detail(e))}</span></div>
-      <div style="text-align:right"><div class="he-k">${e.pcs!=null?(e.type==='koreksi'?spcs(Number(e.pcs)):fpcs(Number(e.pcs))):(e.type==='koreksi'?skg(Number(e.kg)):kg(Number(e.kg)))}</div>${canDelete(e)?`<button class="x" data-act="del" data-id="${esc(e.id)}">Hapus</button>`:''}</div></div>`).join('');
+      <div style="text-align:right"><div class="he-k">${qtyLbl(e)}</div>${canDelete(e)?`<button class="x" data-act="del" data-id="${esc(e.id)}">Hapus</button>`:''}</div></div>`).join('');
   window.__rwList = () => { const list = listFor(), n = $('#rw-n'); if(n) n.textContent = list.length+' catatan'; return list.length?`<div class="hist">${rowsFor(list)}</div>${list.length>150?'<p class="hint">Menampilkan 150 catatan terbaru. Unduh CSV di tab Laporan untuk data lengkap.</p>':''}`:`<section class="card empty"><h2>${ui.q.riwayat?'Tidak ada catatan yang cocok':'Belum ada catatan'}</h2><p>${ui.q.riwayat?'Coba kata lain, misalnya nama buah, jenis catatan, atau tanggal.':'Catatan yang disimpan semua staf akan muncul di sini.'}</p></section>`; };
   return `<div class="row" style="justify-content:space-between;align-items:center"><div class="hint" id="rw-n">${listFor().length} catatan</div>${canManage()?'<button class="btn sm" data-act="settings">Pengaturan</button>':''}</div>
     ${searchBar('riwayat','Cari buah, jenis, atau tanggal')}<div class="chips">${chips}</div>
@@ -1355,7 +1372,7 @@ function openFruits(){
   const d = derived(), s = stock();
   const list = d.fruits.slice().sort((a,b)=>a.name.localeCompare(b.name,'id')).map(f => {
     const n = d.live.filter(e=>e.fruit_id===f.id).length, anyUse = d.all.some(e=>e.fruit_id===f.id);
-    return `<div class="fr"><div class="fr-t"><strong>${esc(f.name)}</strong>${f.hidden?'<span class="badge b-koreksi">Disembunyikan</span>':''}${f._p?'<span class="badge b-pend">Belum terkirim</span>':''}<span class="tag ${isPcs(f)?'pcs':'off'}">${isPcs(f)?'Pcs, '+nf.format(Number(f.pcs_weight))+' g/pcs':'Berat (kg)'}</span><span class="hint">${n} catatan, stok ${isPcs(f)?fpcs((s[f.id]||{stokPcs:0}).stokPcs):kg((s[f.id]||{stok:0}).stok)}</span></div>
+    return `<div class="fr"><div class="fr-t"><strong>${esc(f.name)}</strong>${f.hidden?'<span class="badge b-koreksi">Disembunyikan</span>':''}${f._p?'<span class="badge b-pend">Belum terkirim</span>':''}<span class="tag ${isPcs(f)?'pcs':'off'}">${isPcs(f)?(hasW(f)?'Pcs, '+nf.format(Number(f.pcs_weight))+' g/pcs':'Pcs'):'Berat (kg)'}</span><span class="hint">${n} catatan, stok ${isPcs(f)?fpcs((s[f.id]||{stokPcs:0}).stokPcs):kg((s[f.id]||{stok:0}).stok)}</span></div>
       <div class="row" style="justify-content:flex-start">
         <button type="button" class="btn sm" data-act="fruit-ren" data-fid="${esc(f.id)}" ${f._p?'aria-disabled="true"':''}>Ubah</button>
         <button type="button" class="btn sm" data-act="fruit-hide" data-fid="${esc(f.id)}" ${f._p?'aria-disabled="true"':''}>${f.hidden?'Tampilkan':'Sembunyikan'}</button>
@@ -1379,17 +1396,20 @@ function unitFields(px, unit, w){
   if(!st.migrated6) return canManage() ? `<p class="hint">Pilihan hitung per pcs aktif setelah 6-update.sql dijalankan di Supabase. Sampai saat itu semua buah dihitung dalam kg.</p>` : '';
   return `<div class="field"><label for="${px}-unit">Dihitung dengan</label>
       <select id="${px}-unit" name="unit"><option value="kg" ${unit!=='pcs'?'selected':''}>Berat (kg atau gram), untuk buah yang ditimbang</option><option value="pcs" ${unit==='pcs'?'selected':''}>Pcs (per buah), untuk buah yang dihitung per biji</option></select></div>
-    <div class="field" id="${px}-ww" ${unit==='pcs'?'':'hidden'}><label for="${px}-w">Berat rata-rata 1 pcs (gram)</label>
-      <input id="${px}-w" name="pcs_weight" type="number" inputmode="decimal" min="1" step="any" value="${esc(w||'')}" placeholder="Contoh: 1500">
-      <p class="hint">Dipakai untuk menghitung berat (waste %, laporan) kalau buah tidak ditimbang. Timbang beberapa buah lalu ambil rata-ratanya.</p></div>`;
+    <div class="field" id="${px}-ww" ${unit==='pcs'?'':'hidden'}><label for="${px}-w">Berat rata-rata 1 pcs (gram)${st.migrated7?', boleh kosong':''}</label>
+      <input id="${px}-w" name="pcs_weight" type="number" inputmode="decimal" min="1" step="any" value="${esc(w||'')}" placeholder="${st.migrated7?'Kosongkan kalau tidak ditimbang':'Contoh: 1500'}">
+      <p class="hint">${st.migrated7
+        ? 'Kalau diisi, berat buah yang tidak ditimbang ikut dihitung di waste % dan laporan. Kalau kosong, buah ini dihitung per pcs saja, dan berat hanya tercatat dari catatan yang ditimbang. Untuk catatan kupas, berat kotor tetap harus ditimbang.'
+        : 'Dipakai untuk menghitung berat (waste %, laporan) kalau buah tidak ditimbang. Timbang beberapa buah lalu ambil rata-ratanya.'}</p></div>`;
 }
 function updateUnitForm(sel){ const px = sel.id.split('-')[0], w = document.getElementById(px+'-ww'); if(w) w.hidden = sel.value!=='pcs'; }
 function readUnit(fd, errBox){
   if(!st.migrated6) return {unit:'kg', pcs_weight:null};
   const unit = String(fd.get('unit')||'kg')==='pcs' ? 'pcs' : 'kg';
   if(unit==='kg') return {unit, pcs_weight:null};
-  const w = parseFloat(String(fd.get('pcs_weight')||'').replace(',','.'));
-  if(!isFinite(w) || w<=0){ errBox.innerHTML = '<div class="err" role="alert">Isi berat rata-rata 1 pcs dalam gram.</div>'; return null; }
+  const raw = String(fd.get('pcs_weight')||'').trim(), w = parseFloat(raw.replace(',','.'));
+  if(!raw && st.migrated7) return {unit, pcs_weight:null};
+  if(!isFinite(w) || w<=0){ errBox.innerHTML = `<div class="err" role="alert">${raw?'Berat rata-rata harus lebih dari 0 gram.':'Isi berat rata-rata 1 pcs dalam gram.'}</div>`; return null; }
   return {unit, pcs_weight:Math.round(w*100)/100};
 }
 function submitAddFruit(form){
@@ -1397,7 +1417,7 @@ function submitAddFruit(form){
   if(!name){ err.innerHTML = '<div class="err" role="alert">Isi nama buah.</div>'; return; }
   if(findFruit(name)){ err.innerHTML = '<div class="err" role="alert">Buah ini sudah ada di daftar.</div>'; return; }
   const u = readUnit(fd, err); if(!u) return;
-  enqueue({k:'fruit', row:Object.assign({id:uuid(), name}, u.unit==='pcs'?u:{})});
+  enqueue({k:'fruit', row:Object.assign({id:uuid(), name}, u.unit==='pcs'?u:{})});   // pcs_weight boleh null setelah 7-update
   toast(`${name} ditambahkan${u.unit==='pcs'?', dihitung per pcs':''}`); ui.dirty = true; openFruits(); sync();
 }
 function openRename(fid){
@@ -1419,7 +1439,7 @@ async function submitRename(form){
   const u = readUnit(fd, $('#r-err')); if(!u) return;
   const body = {};
   if(nn!==f.name) body.name = nn;
-  if(st.migrated6 && (u.unit!==(f.unit||'kg') || (u.unit==='pcs' && Number(u.pcs_weight)!==Number(f.pcs_weight)))){ body.unit = u.unit; body.pcs_weight = u.pcs_weight; }
+  if(st.migrated6 && (u.unit!==(f.unit||'kg') || (u.unit==='pcs' && (u.pcs_weight==null ? f.pcs_weight!=null : Number(u.pcs_weight)!==Number(f.pcs_weight))))){ body.unit = u.unit; body.pcs_weight = u.pcs_weight; }
   if(!Object.keys(body).length){ openFruits(); return; }
   const cols = 'id,name,hidden'+(st.migrated6?',unit,pcs_weight':'');
   const ok = await mgmt(async()=>{
@@ -1464,7 +1484,7 @@ function submitOpname(form){
   dlg.close();
   if(!row){ toast('Stok fisik sama dengan stok di sistem.'); return; }
   enqueue({k:'entry', rows:[row]});
-  toast(`Koreksi ${row.pcs!=null?spcs(row.pcs):skg(row.kg)} untuk ${f.name} tersimpan`);
+  toast(`Koreksi ${qtyLbl(row)} untuk ${f.name} tersimpan`);
   render(); updateHeader(); sync();
 }
 
@@ -1946,8 +1966,8 @@ function opRow(f, phys, label){
   const r = stock()[f.id] || {stok:0, stokPcs:0}, P = isPcs(f), r2 = n => Math.round(n*100)/100;
   const sys = P ? r.stokPcs : r.stok, dl = r2(phys-sys);
   if(dl===0) return null;
-  const kgv = P ? r2(dl*pcsKg(f)) : dl;
-  if(kgv===0) return null;
+  const kgv = P ? (hasW(f) ? r2(dl*pcsKg(f)) : null) : dl;
+  if(kgv===0) return null;   // selisih terlalu kecil untuk dicatat dalam kg
   const row = {id:uuid(), entry_date:todayStr(), type:'koreksi', fruit_id:f.id, kg:kgv, price:null, origin:null, menu:null, category:null, stage:null,
     note:`${label}: fisik ${P?fpcs(phys):kg(phys)}, sistem ${P?fpcs(sys):kg(sys)}`, created_by:st.me.id};
   if(P) row.pcs = dl;
@@ -1981,15 +2001,15 @@ function updateOpRow(i, quiet){
   if(out){
     if(v==null){ out.textContent = ''; out.className = 'op-d'; }
     else if(isNaN(v) || v<0){ out.textContent = 'Angka tidak valid'; out.className = 'op-d bad'; }
-    else { const dl = Math.round((v-sys)*100)/100, dkg = P ? dl*pcsKg(f) : dl; out.textContent = dl===0 ? 'Sama' : 'Selisih '+(P?spcs(dl):skg(dl)); out.className = 'op-d '+(dl===0?'ok':Math.abs(dkg)>=OPNAME_BIG?'bad':'mid'); }
+    else { const dl = Math.round((v-sys)*100)/100, dkg = P ? (hasW(f) ? dl*pcsKg(f) : OPNAME_BIG) : dl; out.textContent = dl===0 ? 'Sama' : 'Selisih '+(P?spcs(dl):skg(dl)); out.className = 'op-d '+(dl===0?'ok':Math.abs(dkg)>=OPNAME_BIG?'bad':'mid'); }
   }
   if(!quiet) updateOpSum();
 }
 function updateOpSum(){
   const box = $('#op-sum'); if(!box) return;
   let n = 0, diff = 0, tot = 0;
-  document.querySelectorAll('[data-op]').forEach(i => { const v = opVal(i); if(v==null || isNaN(v) || v<0) return; n++; const row = opRow(derived().fmap[i.dataset.op], v, ''); if(row){ diff++; tot += Math.abs(row.kg); } });
-  box.innerHTML = n ? `<b>${n}</b> buah diisi, <b>${diff}</b> berbeda dari sistem${diff?` (total selisih sekitar ${kg(tot)})`:''}.` : 'Belum ada buah yang diisi.';
+  document.querySelectorAll('[data-op]').forEach(i => { const v = opVal(i); if(v==null || isNaN(v) || v<0) return; n++; const row = opRow(derived().fmap[i.dataset.op], v, ''); if(row){ diff++; tot += Math.abs(row.kg||0); } });
+  box.innerHTML = n ? `<b>${n}</b> buah diisi, <b>${diff}</b> berbeda dari sistem${tot>0?` (total selisih sekitar ${kg(tot)})`:''}.` : 'Belum ada buah yang diisi.';
 }
 async function submitOpAll(form){
   const s = stock(), rows = [], bad = [];
@@ -2004,8 +2024,8 @@ async function submitOpAll(form){
   const filled = Array.from(form.querySelectorAll('[data-op]')).filter(i => opVal(i)!=null).length;
   if(!filled){ err.innerHTML = '<div class="err" role="alert">Belum ada buah yang diisi.</div>'; return; }
   if(!rows.length){ LS.del(opKey()); toast('Semua stok fisik sama dengan sistem. Tidak ada koreksi.'); ui.tab = 'stok'; render(); return; }
-  const tot = rows.reduce((t,r)=>t+Math.abs(r.kg),0);
-  const ok = await ask('Simpan hasil opname?', `${rows.length} buah akan dikoreksi (total selisih ${kg(tot)}). ${filled-rows.length} buah lain sudah sama dengan sistem.`, 'Simpan koreksi');
+  const tot = rows.reduce((t,r)=>t+Math.abs(r.kg||0),0);
+  const ok = await ask('Simpan hasil opname?', `${rows.length} buah akan dikoreksi${tot>0?` (total selisih sekitar ${kg(tot)})`:''}. ${filled-rows.length} buah lain sudah sama dengan sistem.`, 'Simpan koreksi');
   if(!ok) return;
   enqueue({k:'entry', rows});
   LS.del(opKey());
@@ -2036,8 +2056,8 @@ function checksFor(day){
   live.forEach(e => {
     const y = yieldOff(e);
     if(y) out.push({lv:'bad', t:`Hasil kupas ${fruitName(e.fruit_id)} ${pct(y.p)}`, h:`Biasanya sekitar ${pct(y.ref.p)}. ${kg(Number(e.kg_net))} dari ${kg(Number(e.kg))}, oleh ${profName(e.created_by)}.`});
-    if(e.type==='koreksi' && Math.abs(Number(e.kg))>=OPNAME_BIG) out.push({lv:'mid', t:`Koreksi opname ${fruitName(e.fruit_id)} ${skg(Number(e.kg))}`, h:`Oleh ${profName(e.created_by)}.`});
-    if(e.type==='waste' && e.category==='lainnya') out.push({lv:'mid', t:`Waste ${fruitName(e.fruit_id)} ${kg(Number(e.kg))} (lainnya)`, h:`${e.note?e.note.replace(/[.\s]+$/,'')+'. ':''}Oleh ${profName(e.created_by)}.`});
+    if(e.type==='koreksi' && (Math.abs(Number(e.kg))>=OPNAME_BIG || (e.kg==null && e.pcs!=null))) out.push({lv:'mid', t:`Koreksi opname ${fruitName(e.fruit_id)} ${qtyLbl(e)}`, h:`Oleh ${profName(e.created_by)}.`});
+    if(e.type==='waste' && e.category==='lainnya') out.push({lv:'mid', t:`Waste ${fruitName(e.fruit_id)} ${qtyLbl(e)} (lainnya)`, h:`${e.note?e.note.replace(/[.\s]+$/,'')+'. ':''}Oleh ${profName(e.created_by)}.`});
   });
   const dels = d.all.filter(e => e.deleted_at && dayOf(e.deleted_at)===day).concat(d.sAll.filter(e => e.deleted_at && dayOf(e.deleted_at)===day));
   if(dels.length) out.push({lv:'mid', t:`${dels.length} catatan dihapus`, h:'Cek di Riwayat kalau penghapusannya tidak jelas alasannya.'});
@@ -2206,7 +2226,7 @@ async function startSession(){
   st.me = null; st.profiles = []; st.fruits = []; st.entries = new Map(); st.settings = {waste_target:null};
   st.cursor = 0; st.lastSync = 0; st.netFail = false; st.ready = false;
   st.supplies = []; st.sEntries = new Map(); st.sCursor = 0; st.migrated = true; st.migrated2 = false;
-  st.reviews = []; st.migrated5 = false; st.migrated6 = false; ui.started = false; ui.day = todayStr();
+  st.reviews = []; st.migrated5 = false; st.migrated6 = false; st.migrated7 = false; ui.started = false; ui.day = todayStr();
   const cached = loadLocal();
   if(cached && st.me){ st.ready = true; enterApp(); sync(); return; }
   showLoading();
@@ -2318,7 +2338,7 @@ document.addEventListener('click', async ev => {
   }
   else if(a==='del'){
     const e = derived().all.find(x=>x.id===b.dataset.id); if(!e) return;
-    const ok = await ask('Hapus catatan ini?', `${TYPES[e.type].label} ${e.type==='koreksi'?skg(Number(e.kg)):kg(Number(e.kg))} ${fruitName(e.fruit_id)}, ${dateLabel(e.entry_date)}. Stok akan dihitung ulang.`, 'Hapus');
+    const ok = await ask('Hapus catatan ini?', `${TYPES[e.type].label} ${qtyLbl(e)} ${fruitName(e.fruit_id)}, ${dateLabel(e.entry_date)}. Stok akan dihitung ulang.`, 'Hapus');
     if(!ok) return;
     const pendOp = st.queue.find(o => o.k==='entry' && o.rows.some(r=>r.id===e.id));
     if(pendOp){
