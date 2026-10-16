@@ -327,22 +327,21 @@ function stock(){
   return m;
 }
 function monthStats(m){
-  const r = {masuk:0,produksi:0,eceran:0,waste:0,koreksi:0,frozen:0,dari_freezer:0,fnet:0,kupas:0,cats:{},stages:{},fruits:{},yield:{},kotor:0,bersih:0,noNet:0,dapur:{},segar:0,beku:0};
+  const r = {masuk:0,produksi:0,eceran:0,waste:0,koreksi:0,frozen:0,dari_freezer:0,fnet:0,kupas:0,cats:{},stages:{},fruits:{},yield:{},kotor:0,bersih:0,noNet:0,noNetF:{},dapur:{},segar:0,beku:0};
   derived().live.filter(e => e.entry_date.startsWith(m)).forEach(e => {
     const k = Number(e.kg); r[e.type] += k;
     const name = fruitName(e.fruit_id);
-    const f = r.fruits[name] || (r.fruits[name] = {masuk:0,waste:0});
+    const f = r.fruits[name] || (r.fruits[name] = {masuk:0,waste:0,kupas:0});
     if(e.type==='masuk') f.masuk += k;
     if(e.type==='produksi' || e.type==='frozen'){
       if(e.kg_net!=null){
-        // Sisa kupas = berat kotor dikurangi berat bersih. Otomatis dihitung sebagai waste tahap produksi.
+        // Sisa kupas (kulit, biji) = berat kotor dikurangi berat bersih. Dipisah dari waste:
+        // sisa kupas dipantau lewat rendemen, waste hanya yang bisa dikendalikan (busuk, memar, jatuh, lainnya).
         const net = Number(e.kg_net), peel = Math.max(0, k-net);
         const y = r.yield[name] || (r.yield[name] = {kotor:0,bersih:0});
         y.kotor += k; y.bersih += net; r.kotor += k; r.bersih += net; if(e.type==='frozen') r.fnet += net;
-        r.waste += peel; r.kupas += peel; f.waste += peel;
-        r.cats.kupas = (r.cats.kupas||0) + peel;
-        r.stages.produksi = (r.stages.produksi||0) + peel;
-      } else r.noNet += k;
+        r.kupas += peel; f.kupas += peel;
+      } else { r.noNet += k; r.noNetF[name] = (r.noNetF[name]||0) + k; }
     }
     // Buah masuk dapur produksi (berat bersih): segar dari kupas + beku dari freezer, dipakai bersama
     if((e.type==='produksi' && e.kg_net!=null) || e.type==='dari_freezer'){
@@ -350,14 +349,17 @@ function monthStats(m){
       if(e.type==='produksi'){ dp.segar += Number(e.kg_net); r.segar += Number(e.kg_net); } else { dp.beku += k; r.beku += k; }
     }
     if(e.type==='waste'){
-      f.waste += k;
-      r.cats[e.category] = (r.cats[e.category]||0) + k;
-      r.stages[e.stage] = (r.stages[e.stage]||0) + k;
-      if(e.category==='kupas') r.kupas += k;
+      if(e.category==='kupas'){ r.waste -= k; r.kupas += k; f.kupas += k; }   // catatan lama kategori sisa kupas
+      else {
+        f.waste += k;
+        r.cats[e.category] = (r.cats[e.category]||0) + k;
+        r.stages[e.stage] = (r.stages[e.stage]||0) + k;
+      }
     }
   });
-  r.pct = r.masuk>0 ? r.waste/r.masuk*100 : null;
-  r.pctNet = r.masuk>0 ? (r.waste-r.kupas)/r.masuk*100 : null;
+  r.pct = r.masuk>0 ? r.waste/r.masuk*100 : null;              // waste terkendali (tanpa sisa kupas)
+  r.rend = r.kotor>0 ? r.bersih/r.kotor*100 : null;              // rendemen: bersih dibagi kotor
+  r.pctAll = r.masuk>0 ? (r.waste+r.kupas)/r.masuk*100 : null;  // gabungan, hanya untuk perbandingan
   return r;
 }
 function detail(e){
@@ -692,7 +694,7 @@ function viewStok(){
   const nNeg = list.filter(f => s[f.id].stok<0 || (st.migrated2 && s[f.id].freezer<0)).length;
   return `<section class="sum">
       <div><span class="lbl">Total stok sekarang</span><strong>${wt(total)}</strong></div>
-      <div class="w"><span class="lbl">Waste ${esc(monthLabel(thisMonth()))}</span><strong>${ms.pct==null?'–':pct(ms.pct)}</strong></div>
+      <div class="w"><span class="lbl">Waste ${esc(monthLabel(thisMonth()))} (tanpa kupas)</span><strong>${ms.pct==null?'–':pct(ms.pct)}</strong></div>
       ${st.migrated2?`<div class="fz"><span class="lbl">Total di freezer (bersih)</span><strong>${wt(totalF)}</strong><span class="lbl">${bks(totalF)}</span></div>`:''}
     </section>${lowBox()}
     ${nNeg?`<div class="card neg-box"><strong>${nNeg} buah stoknya minus.</strong> <span class="hint">Biasanya karena catatan masuk belum diisi. Ada di urutan teratas.</span></div>`:''}
@@ -1193,14 +1195,14 @@ function viewLapBuah(m, cur, prev){
     cmp = Math.abs(df)<0.05 ? `Sama dengan ${esc(monthLabel(addMonths(m,-1)))}.` :
       `${df>0?'Naik':'Turun'} ${nf1.format(Math.abs(Math.round(df*10)/10))} poin dibanding ${esc(monthLabel(addMonths(m,-1)))}.`;
   }
-  const fr = Object.entries(cur.fruits).filter(([,v])=>v.masuk||v.waste).sort((a,b)=>b[1].waste-a[1].waste);
-  const frRows = fr.length ? fr.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="n">${kg(v.masuk)}</td><td class="n">${kg(v.waste)}</td><td class="n">${v.masuk>0?pct(v.waste/v.masuk*100):'–'}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="hint">Belum ada data bulan ini.</td></tr>';
+  const fr = Object.entries(cur.fruits).filter(([,v])=>v.masuk||v.waste||v.kupas).sort((a,b)=>b[1].waste-a[1].waste);
+  const frRows = fr.length ? fr.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="n">${kg(v.masuk)}</td><td class="n">${kg(v.waste)}</td><td class="n">${v.masuk>0?pct(v.waste/v.masuk*100):'–'}</td><td class="n muted">${kg(v.kupas)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="hint">Belum ada data bulan ini.</td></tr>';
   const months = [5,4,3,2,1,0].map(i=>addMonths(m,-i));
   const tp = months.map(x=>monthStats(x).pct);
   const hasTrend = tp.some(v=>v!=null);
   const trendChart = hasTrend ? colChart(months.map(monthShort), [{name:'Waste', color:VIZ.w, vals:tp.map(v=>v==null?0:Math.round(v*10)/10)}],
-    {fmt:v=>nf1.format(Math.round(v*10)/10)+'%', target:isFinite(target)?target:null, targetLabel:isFinite(target)?'Target '+pct(target):null, lastLabel:true, label:'Waste per bulan'}) : '<p class="hint">Belum ada data waste.</p>';
+    {fmt:v=>nf1.format(Math.round(v*10)/10)+'%', target:isFinite(target)?target:null, targetLabel:isFinite(target)?'Target '+pct(target):null, lastLabel:true, label:'Waste terkendali per bulan'}) : '<p class="hint">Belum ada data waste.</p>';
   // Buah masuk dan keluar per minggu pada bulan terpilih
   const nd = daysIn(m), nw = Math.ceil(nd/7), inW = new Array(nw).fill(0), outW = new Array(nw).fill(0);
   derived().live.filter(e => e.entry_date.startsWith(m)).forEach(e => {
@@ -1212,17 +1214,32 @@ function viewLapBuah(m, cur, prev){
   const flowSer = [{name:'Masuk', color:VIZ.a, vals:inW.map(v=>Math.round(v*10)/10)}, {name:'Keluar', color:VIZ.b, vals:outW.map(v=>Math.round(v*10)/10)}];
   const flowHas = inW.some(v=>v>0) || outW.some(v=>v>0);
   const flowSec = `<section class="card sec"><h2>Buah masuk dan keluar per minggu</h2>${flowHas ? legend(flowSer)+colChart(wl, flowSer, {fmt:v=>cnum(v), tipFmt:v=>kg(v), label:'Buah masuk dan keluar per minggu'})+`<details class="dt"><summary>Lihat angka</summary>${tableHtml(['Tanggal','Masuk','Keluar'], wl.map((l,i)=>[l, kg(inW[i]), kg(outW[i])]))}</details><p class="hint" style="margin-top:6px">Keluar = ke produksi, ke freezer, dan eceran (dalam kg).</p>` : '<p class="hint">Belum ada data bulan ini.</p>'}</section>`;
+  // Rendemen (hasil kupas) per buah: berat bersih dibagi berat kotor, dibanding acuan timbang
   const yEntries = Object.entries(cur.yield).sort((a,b)=>b[1].kotor-a[1].kotor);
-  const yRows = yEntries.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="n">${kg(v.kotor)}</td><td class="n">${kg(v.bersih)}</td><td class="n">${pct(v.bersih/v.kotor*100)}</td></tr>`).join('');
-  const yTot = cur.kotor>0 ? `<tr><td><b>Total</b></td><td class="n"><b>${kg(cur.kotor)}</b></td><td class="n"><b>${kg(cur.bersih)}</b></td><td class="n"><b>${pct(cur.bersih/cur.kotor*100)}</b></td></tr>` : '';
-  const yBars = yEntries.length ? '<div class="bars" style="margin-bottom:14px">'+yEntries.map(([n,v])=>{ const p = v.bersih/v.kotor*100; return `<div><div class="bar-l"><span>${esc(n)}</span><b>${pct(p)}</b></div><div class="bar-t"><i style="width:${Math.min(100,p).toFixed(1)}%;background:${VIZ.a}"></i></div></div>`; }).join('')+'</div>' : '';
-  const yieldSec = `<section class="card sec"><h2>Hasil produksi setelah dikupas</h2>${yBars}<div class="tw"><table><thead><tr><th>Buah</th><th class="n">Kotor</th><th class="n">Bersih</th><th class="n">Hasil</th></tr></thead><tbody>${yRows?yRows+yTot:'<tr><td colspan="4" class="hint">Belum ada data bulan ini.</td></tr>'}</tbody></table></div>${cur.noNet>0?`<p class="hint" style="margin-top:8px">${kg(cur.noNet)} produksi belum punya berat bersih (catatan lama).</p>`:''}<p class="hint" style="margin-top:8px">Sisa kupas dihitung otomatis dari berat kotor dikurangi berat bersih, dan sudah termasuk dalam angka waste. Buah yang dibekukan ikut dihitung di sini.</p></section>`;
-  return `<section class="card kpi"><span class="sub">Waste ${esc(monthLabel(m))}</span>
+  const refOf = n => { const fo = findFruit(n); const r = yieldRef(fo ? fo.id : null, n); return r; };
+  const yRows = yEntries.map(([n,v])=>{
+    const p = v.bersih/v.kotor*100, ref = refOf(n), off = ref && Math.abs(p-ref.p) > YIELD_TOL;
+    return `<tr${off?' class="off"':''}><td>${esc(n)}</td><td class="n">${kg(v.kotor)}</td><td class="n">${kg(v.bersih)}</td><td class="n"><b>${pct(p)}</b></td></tr>`;
+  }).join('');
+  const yTot = cur.kotor>0 ? `<tr><td><b>Total</b></td><td class="n"><b>${kg(cur.kotor)}</b></td><td class="n"><b>${kg(cur.bersih)}</b></td><td class="n"><b>${pct(cur.rend)}</b></td></tr>` : '';
+  const yBars = yEntries.length ? '<div class="bars" style="margin-bottom:14px">'+yEntries.map(([n,v])=>{ const p = v.bersih/v.kotor*100, ref = refOf(n); return `<div><div class="bar-l"><span>${esc(n)}</span><b>${pct(p)}${ref?` <span class="hint">/ acuan ${pct(ref.p)}</span>`:''}</b></div><div class="bar-t"><i style="width:${Math.min(100,p).toFixed(1)}%;background:${VIZ.a}"></i>${ref?`<s style="left:${Math.min(100,ref.p).toFixed(1)}%" title="Acuan"></s>`:''}</div></div>`; }).join('')+'</div>' : '';
+  const noNet = Object.entries(cur.noNetF);
+  const yieldSec = `<section class="card sec"><h2>Rendemen per buah</h2>
+    <p class="hint">Rendemen = berat bersih (daging) dibagi berat kotor (buah utuh) dari catatan Kupas. Makin tinggi makin baik. Garis tipis = acuan.</p>
+    <div style="margin-top:12px">${yBars}</div>
+    <div class="tw"><table class="fit"><thead><tr><th>Buah</th><th class="n">Kotor</th><th class="n">Bersih</th><th class="n">Rendemen</th></tr></thead><tbody>${yRows?yRows+yTot:'<tr><td colspan="4" class="hint">Belum ada catatan kupas dengan berat bersih bulan ini.</td></tr>'}</tbody></table></div>
+    ${noNet.length?`<p class="hint" style="margin-top:8px">Tidak dihitung (kupas tanpa berat bersih, catatan lama): ${noNet.map(([n,k])=>`${esc(n)} ${kg(k)}`).join(', ')}.</p>`:''}
+    <p class="hint" style="margin-top:8px">Acuan: hasil timbang Okt 2026 (alpukat 36%, mangga 41%, nangka 45%), atau rata-rata 90 hari buah itu kalau sudah ada minimal 3 catatan. Baris merah = selisih lebih dari ${YIELD_TOL} poin dari acuan, cek timbangan atau cara kupas.</p></section>`;
+  return `<section class="card kpi"><span class="sub">Waste terkendali ${esc(monthLabel(m))}</span>
       <p class="big">${cur.pct==null?'–':pct(cur.pct)}</p>
       ${cur.pct!=null?meter(cur.pct, isFinite(target)?target:null):''}
-      <p class="sub">${cur.masuk>0?`${kg(cur.waste)} waste dari ${kg(cur.masuk)} buah masuk.`:'Belum ada buah masuk pada bulan ini.'}</p>
+      <p class="sub">${cur.masuk>0?`${kg(cur.waste)} busuk, memar, jatuh, dan lainnya dari ${kg(cur.masuk)} buah masuk.`:'Belum ada buah masuk pada bulan ini.'}</p>
       ${tag}${cmp?`<p class="sub">${cmp}</p>`:''}
-      ${cur.pctNet!=null?`<p class="hint">Tanpa sisa kupas: ${pct(cur.pctNet)} (${kg(cur.waste-cur.kupas)})</p>`:''}</section>
+      <p class="hint">Sisa kupas (kulit dan biji) tidak dihitung di sini. Lihat rendemen di bawah.</p></section>
+    <section class="card kpi rend"><span class="sub">Rendemen kupas ${esc(monthLabel(m))}</span>
+      <p class="big">${cur.rend==null?'–':pct(cur.rend)}</p>
+      <p class="sub">${cur.kotor>0?`${kg(cur.bersih)} daging bersih dari ${kg(cur.kotor)} buah utuh yang dikupas. Sisa kupas ${kg(cur.kupas)}.`:'Belum ada catatan kupas dengan berat bersih bulan ini.'}</p>
+      ${cur.pctAll!=null?`<p class="hint">Kalau digabung (waste + sisa kupas): ${pct(cur.pctAll)} dari buah masuk.</p>`:''}</section>
     <section class="grid2">
       <div><span class="lbl">Masuk</span><br><strong>${kg(cur.masuk)}</strong></div>
       <div><span class="lbl">Ke produksi</span><br><strong>${kg(cur.produksi+cur.frozen)}</strong>${cur.frozen>0?`<br><span class="hint">termasuk ${kg(cur.frozen)} ke freezer</span>`:''}</div>
@@ -1231,11 +1248,11 @@ function viewLapBuah(m, cur, prev){
       ${st.migrated2?`<div><span class="lbl">Dibekukan (bersih)</span><br><strong>${kg(cur.fnet)}</strong></div>
       <div><span class="lbl">Dari freezer ke dapur</span><br><strong>${kg(cur.dari_freezer)}</strong></div>`:''}
     </section>
-    <section class="card sec"><h2>Waste 6 bulan terakhir</h2>${trendChart}${hasTrend?`<details class="dt"><summary>Lihat angka</summary>${tableHtml(['Bulan','Waste'], months.map((x,i)=>[monthLabel(x), tp[i]==null?'–':pct(tp[i])]))}</details>`:''}</section>
+    <section class="card sec"><h2>Waste terkendali 6 bulan terakhir</h2>${trendChart}${hasTrend?`<details class="dt"><summary>Lihat angka</summary>${tableHtml(['Bulan','Waste'], months.map((x,i)=>[monthLabel(x), tp[i]==null?'–':pct(tp[i])]))}</details>`:''}</section>
     ${flowSec}
     <section class="card sec"><h2>Waste per kategori</h2>${bars(cur.cats, CATS)}</section>
     <section class="card sec"><h2>Waste per tahap</h2>${bars(cur.stages, STAGES)}</section>
-    <section class="card sec"><h2>Per jenis buah</h2><div class="tw"><table><thead><tr><th>Buah</th><th class="n">Masuk</th><th class="n">Waste</th><th class="n">%</th></tr></thead><tbody>${frRows}</tbody></table></div></section>
+    <section class="card sec"><h2>Waste per jenis buah</h2><p class="hint">Waste = busuk, memar, jatuh, lainnya. Sisa kupas ditampilkan terpisah sebagai pembanding, tidak dihitung dalam %.</p><div class="tw" style="margin-top:10px"><table class="fit"><thead><tr><th>Buah</th><th class="n">Masuk</th><th class="n">Waste</th><th class="n">%</th><th class="n">Kupas</th></tr></thead><tbody>${frRows}</tbody></table></div></section>
     ${yieldSec}
     ${dapurSec(cur)}
     ${canManage()?'<button class="btn" data-act="export-csv">Unduh CSV bulan ini</button>':''}`;
@@ -1500,7 +1517,7 @@ function openSettings(){
   const leg = canManage() ? legacyData() : null;
   openDlg(`<div class="dl"><h2>Pengaturan</h2>
     ${isMgr()?`<form id="f-set" class="form" novalidate>
-      <div class="field"><label for="s-target">Target waste maksimum per bulan (%), boleh kosong</label><input id="s-target" name="target" type="number" inputmode="decimal" step="any" min="0" value="${esc(st.settings.waste_target==null?'':st.settings.waste_target)}"></div>
+      <div class="field"><label for="s-target">Target waste terkendali per bulan (%), boleh kosong</label><p class="hint">Waste terkendali = busuk, memar, jatuh, lainnya. Sisa kupas (kulit dan biji) tidak termasuk; dipantau lewat rendemen.</p><input id="s-target" name="target" type="number" inputmode="decimal" step="any" min="0" value="${esc(st.settings.waste_target==null?'':st.settings.waste_target)}"></div>
       <div id="st-err"></div>
       <button class="btn pri" type="submit">Simpan target</button></form><hr>`:''}
     <h2 style="font-size:17px">Daftar buah</h2>
@@ -2069,15 +2086,17 @@ function viewHari(){
   const sum = t => live.filter(e => t.includes(e.type)).reduce((a,e)=>a+Number(e.kg),0);
   const peel = live.filter(e => (e.type==='produksi'||e.type==='frozen') && e.kg_net!=null).reduce((a,e)=>a+Math.max(0,Number(e.kg)-Number(e.kg_net)),0);
   const segar = live.filter(e => e.type==='produksi' && e.kg_net!=null).reduce((a,e)=>a+Number(e.kg_net),0), beku = sum(['dari_freezer']);
+  const withNet = live.filter(e => (e.type==='produksi'||e.type==='frozen') && e.kg_net!=null);
+  const kotorD = withNet.reduce((a,e)=>a+Number(e.kg),0), bersihD = withNet.reduce((a,e)=>a+Number(e.kg_net),0);
   const head = `<div class="mbar"><button class="btn" data-act="day" data-v="-1" aria-label="Hari sebelumnya">‹</button>
       <input type="date" id="d-day" value="${esc(day)}" max="${today}" aria-label="Pilih tanggal"><button class="btn" data-act="day" data-v="1" aria-label="Hari berikutnya" ${day>=today?'disabled':''}>›</button></div>`;
   const tiles = `<section class="grid2">
       <div><span class="lbl">Catatan</span><br><strong>${live.length+sl.length}</strong>${st.migrated?`<br><span class="hint">${live.length} buah, ${sl.length} bahan</span>`:''}</div>
       <div><span class="lbl">Buah masuk</span><br><strong>${kg(sum(['masuk']))}</strong></div>
-      <div><span class="lbl">Dikupas (kotor)</span><br><strong>${kg(sum(['produksi','frozen']))}</strong>${sum(['frozen'])>0?`<br><span class="hint">${kg(sum(['frozen']))} untuk freezer</span>`:''}</div>
+      <div><span class="lbl">Dikupas (kotor)</span><br><strong>${kg(sum(['produksi','frozen']))}</strong>${kotorD>0?`<br><span class="hint">rendemen ${pct(bersihD/kotorD*100)}, sisa kupas ${kg(peel)}</span>`:''}</div>
       <div><span class="lbl">Masuk dapur (bersih)</span><br><strong>${kg(segar+beku)}</strong><br><span class="hint">segar ${kg(segar)} + beku ${kg(beku)}</span></div>
       <div><span class="lbl">Eceran</span><br><strong>${kg(sum(['eceran']))}</strong></div>
-      <div><span class="lbl">Waste</span><br><strong>${kg(sum(['waste'])+peel)}</strong><br><span class="hint">dicatat ${kg(sum(['waste']))} + sisa kupas ${kg(peel)}</span></div></section>`;
+      <div><span class="lbl">Waste</span><br><strong>${kg(sum(['waste']))}</strong><br><span class="hint">busuk, memar, jatuh (tanpa sisa kupas)</span></div></section>`;
   const ch = checksFor(day);
   const checks = `<section class="card sec"><h2>Perlu dicek</h2>${ch.length ? `<div class="chk">${ch.map(c=>`<div class="chk-i ${c.lv}"><strong>${esc(c.t)}</strong><span class="hint">${esc(c.h)}</span></div>`).join('')}</div>` : '<p class="hint">Tidak ada yang perlu dicek.</p>'}
       ${day===today?'':'<p class="hint" style="margin-top:8px">Stok minus dan bahan menipis hanya ditampilkan untuk hari ini.</p>'}</section>`;
