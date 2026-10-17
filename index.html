@@ -185,6 +185,11 @@ const hasW = f => !!f && Number(f.pcs_weight)>0;
 const isPcs = f => !!f && st.migrated6 && f.unit==='pcs' && (hasW(f) || st.migrated7);
 const pcsKg = f => hasW(f) ? Number(f.pcs_weight)/1000 : null;    // berat rata-rata 1 pcs dalam kg
 const pcsOf = (e, f) => e.pcs!=null ? Number(e.pcs) : (hasW(f) && e.kg!=null ? Number(e.kg)/pcsKg(f) : 0);
+// "Ke dapur" = buah yang tidak dikupas (jeruk, lemon) dipindah utuh dari gudang ke dapur produksi.
+// Disimpan sebagai jenis produksi tanpa berat bersih, ditandai dengan awalan catatan berikut.
+const DIRECT_NOTE = 'Ke dapur tanpa kupas';
+const isDirect = e => e.type==='produksi' && e.kg_net==null && String(e.note||'').indexOf(DIRECT_NOTE)===0;
+const typeLbl = e => isDirect(e) ? 'Ke dapur' : TYPES[e.type].label;
 const qtyLbl = e => e.pcs!=null ? (e.type==='koreksi'?spcs(Number(e.pcs)):fpcs(Number(e.pcs))) : (e.type==='koreksi'?skg(Number(e.kg)):kg(Number(e.kg)));
 const fpcs = n => nf.format(Math.round(n*100)/100)+' pcs';
 const spcs = n => (n>0?'+':n<0?'\u2212':'')+fpcs(Math.abs(n));
@@ -327,7 +332,7 @@ function stock(){
   return m;
 }
 function monthStats(m){
-  const r = {masuk:0,produksi:0,eceran:0,waste:0,koreksi:0,frozen:0,dari_freezer:0,fnet:0,kupas:0,cats:{},stages:{},fruits:{},yield:{},kotor:0,bersih:0,noNet:0,noNetF:{},dapur:{},segar:0,beku:0};
+  const r = {masuk:0,produksi:0,eceran:0,waste:0,koreksi:0,frozen:0,dari_freezer:0,fnet:0,kupas:0,cats:{},stages:{},fruits:{},yield:{},kotor:0,bersih:0,noNet:0,noNetF:{},direct:0,dapur:{},segar:0,beku:0};
   derived().live.filter(e => e.entry_date.startsWith(m)).forEach(e => {
     const k = Number(e.kg); r[e.type] += k;
     const name = fruitName(e.fruit_id);
@@ -341,12 +346,13 @@ function monthStats(m){
         const y = r.yield[name] || (r.yield[name] = {kotor:0,bersih:0});
         y.kotor += k; y.bersih += net; r.kotor += k; r.bersih += net; if(e.type==='frozen') r.fnet += net;
         r.kupas += peel; f.kupas += peel;
-      } else { r.noNet += k; r.noNetF[name] = (r.noNetF[name]||0) + k; }
+      } else if(isDirect(e)){ r.direct += k; }
+      else { r.noNet += k; r.noNetF[name] = (r.noNetF[name]||0) + k; }
     }
     // Buah masuk dapur produksi (berat bersih): segar dari kupas + beku dari freezer, dipakai bersama
-    if((e.type==='produksi' && e.kg_net!=null) || e.type==='dari_freezer'){
+    if((e.type==='produksi' && (e.kg_net!=null || isDirect(e))) || e.type==='dari_freezer'){
       const dp = r.dapur[e.fruit_id] || (r.dapur[e.fruit_id] = {segar:0, beku:0});
-      if(e.type==='produksi'){ dp.segar += Number(e.kg_net); r.segar += Number(e.kg_net); } else { dp.beku += k; r.beku += k; }
+      if(e.type==='produksi'){ const v = e.kg_net!=null ? Number(e.kg_net) : k; dp.segar += v; r.segar += v; } else { dp.beku += k; r.beku += k; }
     }
     if(e.type==='waste'){
       if(e.category==='kupas'){ r.waste -= k; r.kupas += k; f.kupas += k; }   // catatan lama kategori sisa kupas
@@ -369,7 +375,8 @@ function detail(e){
   if(e.type==='produksi' || e.type==='frozen'){ if(e.kg_net!=null){ const n = Number(e.kg_net), g = Number(e.kg); p.push('bersih '+kg(n)+', hasil '+pct(g>0?n/g*100:0)); } if(e.type==='produksi' && e.menu) p.push(e.menu); }
   if(e.type==='eceran' && e.price) p.push(rp(e.price)+'/kg');
   if(e.type==='waste'){ p.push(CATS[e.category]||e.category); p.push('tahap '+(STAGES[e.stage]||e.stage).toLowerCase()); }
-  if(e.note) p.push(e.note);
+  if(isDirect(e)) p.push('utuh, tanpa kupas');
+  else if(e.note) p.push(e.note);
   p.push('oleh '+profName(e.created_by));
   return p.join(', ');
 }
@@ -442,7 +449,7 @@ function describeOp(op){
     if(op.rows.every(r=>r.type==='koreksi')) return op.rows.length+' koreksi opname';
     return op.rows.length+' catatan impor';
   }
-  const r = op.rows[0]; return TYPES[r.type].label+' '+qtyLbl(r)+' '+fruitName(r.fruit_id);
+  const r = op.rows[0]; return typeLbl(r)+' '+qtyLbl(r)+' '+fruitName(r.fruit_id);
 }
 let flushing = false;
 async function flush(){
@@ -724,6 +731,7 @@ function quickFruits(){
 function catTypes(){
   const out = [];
   allowedTypes().forEach(t => { if(t==='produksi' || t==='frozen'){ if(!out.includes('kupas')) out.push('kupas'); } else out.push(t); });
+  if(allowedTypes().includes('produksi')) out.splice(out.indexOf('kupas')+1, 0, 'dapur');
   return out;
 }
 function destOpts(){
@@ -764,7 +772,7 @@ function viewCatat(){
   const opts = derived().fruits.filter(f=>!f.hidden).sort((a,b)=>a.name.localeCompare(b.name,'id')).map(f=>`<option value="${esc(f.name)}"></option>`).join('');
   const quick = quickFruits().map(n=>`<button type="button" class="chip" data-act="pick-fruit" data-fruit="${esc(n)}" aria-pressed="${n===d.fruit}">${esc(n)}</button>`).join('');
   const uo = unitOpts(t, f0), uSel = uo.some(o=>o[0]===ui.unit[t]) ? ui.unit[t] : uo[0][0];
-  const qtyLabel = {masuk:'Jumlah masuk', kupas:'Buah kotor yang dikupas', dari_freezer:'Diambil dari freezer', eceran:'Terjual eceran', waste:'Jumlah waste'}[t];
+  const qtyLabel = {masuk:'Jumlah masuk', kupas:'Buah kotor yang dikupas', dapur:'Jumlah dibawa ke dapur', dari_freezer:'Diambil dari freezer', eceran:'Terjual eceran', waste:'Jumlah waste'}[t];
   const actField = t==='dari_freezer' ? '' : `<div class="field" id="f-actw" ${isPcs(f0)?'':'hidden'}><label for="f-act" id="f-act-l">Berat sebenarnya (kg), boleh kosong</label>
       <input id="f-act" name="act" type="number" inputmode="decimal" step="any" min="0" placeholder="Kosongkan kalau tidak ditimbang">
       <p class="hint" id="f-pcs-h"></p></div>`;
@@ -775,7 +783,8 @@ function viewCatat(){
   if(t==='kupas') extra = `
     <div class="field"><label for="f-net">Berat bersih setelah dikupas</label>
       <div class="kg"><input id="f-net" name="net" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><select id="f-nu" name="nu" class="u-sel" aria-label="Satuan berat bersih">${optHtml([['kg','kg'],['g','gram']], ui.unit.net||'kg')}</select></div>
-      <div id="yield-box" class="yield" aria-live="polite">Isi berat kotor dan berat bersih untuk melihat persentase hasil.</div></div>
+      <div id="yield-box" class="yield" aria-live="polite">Isi berat kotor dan berat bersih untuk melihat persentase hasil.</div>
+      ${catTypes().includes('dapur')?'<p class="hint">Buah yang tidak dikupas (jeruk, lemon)? Pakai tab <b>Ke dapur</b>.</p>':''}</div>
     <div class="field"><span class="lbl-f">Tujuan buah yang sudah dikupas</span>
       ${dests.length>1?`<div class="seg dest" role="radiogroup" aria-label="Tujuan" style="grid-template-columns:repeat(${dests.length},1fr)">${dests.map(k=>`<button type="button" role="radio" aria-checked="${k===ui.dest}" aria-selected="${k===ui.dest}" class="seg-${k==='dapur'?'produksi':'frozen'}" data-act="dest" data-v="${k}">${DEST_LABEL[k]}</button>`).join('')}</div>`
         : `<p class="hint">${dests[0]==='dapur'?'Masuk dapur produksi.':'Masuk freezer.'}${!st.migrated2&&canManage()?' Pilihan freezer aktif setelah 4-update.sql dijalankan.':''}</p>`}
@@ -785,6 +794,8 @@ function viewCatat(){
       <p class="hint">1 bungkus = ${nf.format(FROZEN_PACK*1000)} g. Sisanya otomatis dihitung masuk dapur.</p></div>`:''}
     <div id="split-box" class="yield" aria-live="polite" ${ui.dest==='dapur'?'hidden':''}></div>
     ${ui.dest!=='freezer'?'<div class="field"><label for="f-menu">Untuk menu olahan, boleh kosong</label><input id="f-menu" name="menu" type="text" autocomplete="off"></div>':''}`;
+  if(t==='dapur') extra = `<p class="hint">Untuk buah yang tidak dikupas, misalnya jeruk dan lemon: buah utuh dipindah dari gudang ke dapur produksi. Stok gudang berkurang, buah dihitung masuk dapur. Tidak ada berat bersih dan tidak ikut rendemen.</p>
+    <div class="field"><label for="f-menu">Untuk menu olahan, boleh kosong</label><input id="f-menu" name="menu" type="text" autocomplete="off"></div>`;
   if(t==='dari_freezer') extra = `<p class="hint">Buah beku yang diambil dari freezer ke dapur produksi, lalu dipakai bersama buah segar. Hanya mengurangi stok freezer. 1 bungkus = ${nf.format(FROZEN_PACK*1000)} g.</p>
     <div id="frz-box" class="yield" aria-live="polite">Pilih buah untuk melihat stok freezer.</div>`;
   if(t==='eceran') extra = `
@@ -795,8 +806,8 @@ function viewCatat(){
     <div class="field"><label for="f-stage">Terjadi di tahap</label><select id="f-stage" name="stage"><option value="">Pilih tahap</option>${Object.entries(STAGES).map(([k,v])=>`<option value="${k}" ${k===ROLE_STAGE[myRole()]?'selected':''}>${esc(v)}</option>`).join('')}</select>
       ${ROLE_STAGE[myRole()]?`<p class="hint">Terisi otomatis sesuai perananmu. Ubah kalau waste terjadi di tempat lain.</p>`:''}</div>
     <div class="field"><label for="f-note">Catatan (wajib jika kategori Lainnya)</label><textarea id="f-note" name="note"></textarea></div>`;
-  const label = k => k==='kupas' ? 'Kupas' : TYPES[k].label;
-  return `${updHint()}<div class="seg" role="tablist" aria-label="Jenis catatan" style="grid-template-columns:repeat(${types.length>4?3:types.length},1fr)">${types.map(k=>`<button type="button" role="tab" aria-selected="${k===t}" class="seg-${k==='kupas'?'produksi':k}" data-act="type" data-v="${k}">${label(k)}</button>`).join('')}</div>
+  const label = k => k==='kupas' ? 'Kupas' : k==='dapur' ? 'Ke dapur' : TYPES[k].label;
+  return `${updHint()}<div class="seg" role="tablist" aria-label="Jenis catatan" style="grid-template-columns:repeat(${types.length>4?3:types.length},1fr)">${types.map(k=>`<button type="button" role="tab" aria-selected="${k===t}" class="seg-${k==='kupas'||k==='dapur'?'produksi':k}" data-act="type" data-v="${k}">${label(k)}</button>`).join('')}</div>
   <form id="f" class="card form" novalidate>
     <div class="field"><label for="f-date">Tanggal</label><input id="f-date" name="date" type="date" value="${esc(d.date)}" max="${todayStr()}"></div>
     <div class="field"><label for="f-fruit">Jenis buah</label>
@@ -872,6 +883,11 @@ async function submitEntry(form){
   let rows = [], net = null;
   if(t==='masuk'){ const o = String(fd.get('origin')||'').trim(); rows = [mk('masuk', kgv, {price, origin:o||null, pcs, note:pNote})]; }
   if(t==='eceran') rows = [mk('eceran', kgv, {price, pcs, note:pNote})];
+  if(t==='dapur'){
+    if(kgv==null) errs.push(`Timbang ${known?known.name:'buah'} dan isi beratnya (wajib untuk catatan ke dapur).`);
+    const menu = String(fd.get('menu')||'').trim() || null;
+    rows = [mk('produksi', kgv, {pcs, menu, note:DIRECT_NOTE})];
+  }
   if(t==='dari_freezer'){
     if(!st.migrated2) errs.push('Fitur freezer belum aktif. Minta manager menjalankan 4-update.sql di Supabase.');
     rows = [mk('dari_freezer', kgv, {note: u==='bks' ? `${nf.format(q)} bungkus` : null})];
@@ -948,7 +964,7 @@ async function submitEntry(form){
   ui.unit[t] = u; if(t==='kupas'){ ui.unit.net = String(fd.get('nu')||'kg'); if(fd.get('zu')) ui.unit.z = String(fd.get('zu')); }
   saveUnits();
   const qty = pcsF ? fpcs(q) : (u==='bks' ? `${nf.format(q)} bungkus (${kg(kgv)})` : kg(kgv));
-  let msg = `Tersimpan: ${t==='kupas'?'kupas':TYPES[t].label.toLowerCase()} ${qty} ${fname}`;
+  let msg = `Tersimpan: ${t==='kupas'?'kupas':t==='dapur'?'ke dapur':TYPES[t].label.toLowerCase()} ${qty} ${fname}`;
   if(t==='kupas'){
     const fz = rows.find(r=>r.type==='frozen'), dp = rows.find(r=>r.type==='produksi');
     msg += `, hasil ${pct(net/kgv*100)}` + (fz?`, freezer ${kg(fz.kg_net)} (${bks(fz.kg_net)})`:'') + (dp?`, dapur ${kg(dp.kg_net)}`:'');
@@ -1271,11 +1287,11 @@ function viewLaporan(){
 function viewRiwayat(){
   const f = ui.filter;
   const listFor = () => derived().live.filter(e=>f==='semua'||e.type===f)
-    .filter(e=>matchQ(ui.q.riwayat, fruitName(e.fruit_id), TYPES[e.type].label, detail(e), dateLabel(e.entry_date), e.entry_date))
+    .filter(e=>matchQ(ui.q.riwayat, fruitName(e.fruit_id), typeLbl(e), detail(e), dateLabel(e.entry_date), e.entry_date))
     .sort((a,b)=>b.entry_date.localeCompare(a.entry_date)||Date.parse(b.created_at)-Date.parse(a.created_at));
   const chips = ['semua','masuk','produksi'].concat(st.migrated2?['frozen','dari_freezer']:[]).concat(['eceran','waste','koreksi']).map(k=>`<button class="chip" data-act="filter" data-v="${k}" aria-pressed="${k===f}">${k==='semua'?'Semua':TYPES[k].label}</button>`).join('');
   const rowsFor = list => list.slice(0,150).map(e=>`<div class="he ${e._p?'pend':''}"><div class="he-b">
-      <div class="he-t"><span class="badge b-${e.type}">${esc(TYPES[e.type].label)}</span><strong>${esc(fruitName(e.fruit_id))}</strong>${e._p?'<span class="badge b-pend">Belum terkirim</span>':''}</div>
+      <div class="he-t"><span class="badge b-${e.type}">${esc(typeLbl(e))}</span><strong>${esc(fruitName(e.fruit_id))}</strong>${e._p?'<span class="badge b-pend">Belum terkirim</span>':''}</div>
       <span class="he-d">${esc(dateLabel(e.entry_date))}, ${esc(detail(e))}</span></div>
       <div style="text-align:right"><div class="he-k">${qtyLbl(e)}</div>${canDelete(e)?`<button class="x" data-act="del" data-id="${esc(e.id)}">Hapus</button>`:''}</div></div>`).join('');
   window.__rwList = () => { const list = listFor(), n = $('#rw-n'); if(n) n.textContent = list.length+' catatan'; return list.length?`<div class="hist">${rowsFor(list)}</div>${list.length>150?'<p class="hint">Menampilkan 150 catatan terbaru. Unduh CSV di tab Laporan untuk data lengkap.</p>':''}`:`<section class="card empty"><h2>${ui.q.riwayat?'Tidak ada catatan yang cocok':'Belum ada catatan'}</h2><p>${ui.q.riwayat?'Coba kata lain, misalnya nama buah, jenis catatan, atau tanggal.':'Catatan yang disimpan semua staf akan muncul di sini.'}</p></section>`; };
@@ -1611,7 +1627,7 @@ function exportCsv(){
   const head = ['tanggal','jenis','buah','kg','pcs','kg_bersih','harga_per_kg','asal','menu','kategori_waste','tahap','catatan','dicatat_oleh'];
   const rows = derived().live.filter(e=>e.entry_date.startsWith(ui.month))
     .sort((a,b)=>a.entry_date.localeCompare(b.entry_date)||Date.parse(a.created_at)-Date.parse(b.created_at))
-    .map(e=>[e.entry_date,TYPES[e.type].label,fruitName(e.fruit_id),e.kg,e.pcs,e.kg_net,e.price,e.origin,e.menu,e.category?CATS[e.category]:'',e.stage?STAGES[e.stage]:'',e.note,profName(e.created_by)].map(q).join(','));
+    .map(e=>[e.entry_date,typeLbl(e),fruitName(e.fruit_id),e.kg,e.pcs,e.kg_net,e.price,e.origin,e.menu,e.category?CATS[e.category]:'',e.stage?STAGES[e.stage]:'',e.note,profName(e.created_by)].map(q).join(','));
   download(`stok-buah-${ui.month}.csv`, '\ufeff'+[head.join(',')].concat(rows).join('\r\n'), 'text/csv;charset=utf-8');
 }
 
@@ -2085,15 +2101,16 @@ function viewHari(){
   const live = d.live.filter(e => e.entry_date===day), sl = d.sLive.filter(e => e.entry_date===day);
   const sum = t => live.filter(e => t.includes(e.type)).reduce((a,e)=>a+Number(e.kg),0);
   const peel = live.filter(e => (e.type==='produksi'||e.type==='frozen') && e.kg_net!=null).reduce((a,e)=>a+Math.max(0,Number(e.kg)-Number(e.kg_net)),0);
-  const segar = live.filter(e => e.type==='produksi' && e.kg_net!=null).reduce((a,e)=>a+Number(e.kg_net),0), beku = sum(['dari_freezer']);
+  const segar = live.filter(e => e.type==='produksi' && (e.kg_net!=null || isDirect(e))).reduce((a,e)=>a+Number(e.kg_net!=null?e.kg_net:e.kg),0), beku = sum(['dari_freezer']);
   const withNet = live.filter(e => (e.type==='produksi'||e.type==='frozen') && e.kg_net!=null);
   const kotorD = withNet.reduce((a,e)=>a+Number(e.kg),0), bersihD = withNet.reduce((a,e)=>a+Number(e.kg_net),0);
+  const directD = live.filter(isDirect).reduce((a,e)=>a+Number(e.kg),0);
   const head = `<div class="mbar"><button class="btn" data-act="day" data-v="-1" aria-label="Hari sebelumnya">‹</button>
       <input type="date" id="d-day" value="${esc(day)}" max="${today}" aria-label="Pilih tanggal"><button class="btn" data-act="day" data-v="1" aria-label="Hari berikutnya" ${day>=today?'disabled':''}>›</button></div>`;
   const tiles = `<section class="grid2">
       <div><span class="lbl">Catatan</span><br><strong>${live.length+sl.length}</strong>${st.migrated?`<br><span class="hint">${live.length} buah, ${sl.length} bahan</span>`:''}</div>
       <div><span class="lbl">Buah masuk</span><br><strong>${kg(sum(['masuk']))}</strong></div>
-      <div><span class="lbl">Dikupas (kotor)</span><br><strong>${kg(sum(['produksi','frozen']))}</strong>${kotorD>0?`<br><span class="hint">rendemen ${pct(bersihD/kotorD*100)}, sisa kupas ${kg(peel)}</span>`:''}</div>
+      <div><span class="lbl">Dikupas (kotor)</span><br><strong>${kg(sum(['produksi','frozen'])-directD)}</strong>${kotorD>0?`<br><span class="hint">rendemen ${pct(bersihD/kotorD*100)}, sisa kupas ${kg(peel)}</span>`:''}</div>
       <div><span class="lbl">Masuk dapur (bersih)</span><br><strong>${kg(segar+beku)}</strong><br><span class="hint">segar ${kg(segar)} + beku ${kg(beku)}</span></div>
       <div><span class="lbl">Eceran</span><br><strong>${kg(sum(['eceran']))}</strong></div>
       <div><span class="lbl">Waste</span><br><strong>${kg(sum(['waste']))}</strong><br><span class="hint">busuk, memar, jatuh (tanpa sisa kupas)</span></div></section>`;
@@ -2357,7 +2374,7 @@ document.addEventListener('click', async ev => {
   }
   else if(a==='del'){
     const e = derived().all.find(x=>x.id===b.dataset.id); if(!e) return;
-    const ok = await ask('Hapus catatan ini?', `${TYPES[e.type].label} ${qtyLbl(e)} ${fruitName(e.fruit_id)}, ${dateLabel(e.entry_date)}. Stok akan dihitung ulang.`, 'Hapus');
+    const ok = await ask('Hapus catatan ini?', `${typeLbl(e)} ${qtyLbl(e)} ${fruitName(e.fruit_id)}, ${dateLabel(e.entry_date)}. Stok akan dihitung ulang.`, 'Hapus');
     if(!ok) return;
     const pendOp = st.queue.find(o => o.k==='entry' && o.rows.some(r=>r.id===e.id));
     if(pendOp){
