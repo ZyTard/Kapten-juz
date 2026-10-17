@@ -64,6 +64,28 @@ const ROLE_STAGE = {kasir:'eceran', produksi:'produksi', admin:'gudang', manager
 const YIELD_REF = {alpukat:36, mangga:41, nangka:45};
 const YIELD_TOL = 15;      // selisih (poin persen) dari biasanya yang dianggap tidak wajar
 const OPNAME_BIG = 2;      // koreksi opname >= 2 kg masuk daftar "perlu dicek"
+// Acuan umum penyimpanan suhu ruang (tropis, ±28-30°C). Sesuaikan dengan pengalaman di dapur sendiri.
+// peram: true = buah masih bisa matang setelah dibeli (diperam). min-max = hari sampai siap diproses
+// (buah peram) atau batas simpan yang aman (buah tanpa peram). olah = saran setelah siap.
+const RIPE_REF = {
+  alpukat:{peram:true, min:3, max:5, olah:'Siap kalau ditekan sedikit empuk. Proses atau bekukan 1-2 hari setelah empuk.'},
+  mangga:{peram:true, min:3, max:5, olah:'Siap kalau harum dan sedikit empuk. Proses atau bekukan 1-2 hari setelahnya.'},
+  pisang:{peram:true, min:2, max:4, olah:'Siap kalau kuning dengan bintik cokelat sedikit. Proses 1-2 hari setelahnya.'},
+  pepaya:{peram:true, min:2, max:4, olah:'Siap kalau kulit lebih dari separuh kuning. Proses 1-2 hari setelahnya.'},
+  sirsak:{peram:true, min:2, max:4, olah:'Siap kalau empuk merata. Cepat busuk, proses hari itu juga.'},
+  melon:{peram:true, min:2, max:4, olah:'Siap kalau pangkal harum. Proses 2-3 hari setelahnya.'},
+  nangka:{peram:true, min:2, max:4, olah:'Siap kalau harum kuat. Setelah dibuka, proses atau bekukan hari itu.'},
+  'buah naga':{peram:false, min:5, max:7, olah:'Tidak matang lagi setelah dipetik. Proses sebelum kulit keriput.'},
+  semangka:{peram:false, min:7, max:10, olah:'Tidak diperam. Utuh tahan lama, setelah dipotong proses hari itu.'},
+  nanas:{peram:false, min:2, max:3, olah:'Tidak matang lagi setelah dipetik. Proses cepat sebelum berair dan asam.'},
+  jeruk:{peram:false, min:7, max:14, olah:'Tidak diperam. Simpan sejuk dan kering, pakai yang masuk lebih dulu.'},
+  lemon:{peram:false, min:7, max:14, olah:'Tidak diperam. Simpan sejuk dan kering, pakai yang masuk lebih dulu.'},
+  stroberi:{peram:false, min:1, max:2, olah:'Sangat cepat rusak. Simpan dingin dan proses atau bekukan 1-2 hari.'},
+  anggur:{peram:false, min:3, max:5, olah:'Simpan dingin. Proses sebelum tangkai mengering.'},
+  jambu:{peram:true, min:2, max:3, olah:'Cepat lembek. Proses 1 hari setelah matang.'}
+};
+const ripeRef = name => RIPE_REF[String(name||'').trim().toLowerCase()] || null;
+const RIPE_LATE = 2;       // lewat lebih dari 2 hari dari estimasi = peringatan merah
 const FROZEN_PACK = 0.5;   // 1 bungkus buah beku = 500 g (SOP pemfrozenan)
 const STYPES = {
   masuk:{label:'Masuk gudang'}, pindah:{label:'Pindah ke dapur'}, pakai:{label:'Dipakai'}, rusak:{label:'Rusak'}, koreksi:{label:'Koreksi opname'}
@@ -142,9 +164,9 @@ class NetErr extends Error { constructor(m){ super(m||'offline'); this.net = tru
 const st = {
   session:null, me:null, profiles:[], fruits:[], entries:new Map(), settings:{waste_target:null},
   cursor:0, sCursor:0, supplies:[], sEntries:new Map(), migrated:true, migrated2:false, lastSync:0, queue:[], rejected:[],
-  syncing:false, again:false, netFail:false, ready:false, ver:0, reviews:[], migrated5:false, migrated6:false, migrated7:false
+  syncing:false, again:false, netFail:false, ready:false, ver:0, reviews:[], migrated5:false, migrated6:false, migrated7:false, migrated8:false
 };
-const ui = {tab:'stok', type:'masuk', month:thisMonth(), filter:'semua', draft:{date:todayStr(), fruit:''}, dirty:false, sub:'stok', stype:'masuk', sdraft:{date:todayStr(), item:''}, rsub:'buah', tmode:'minggu', q:{stok:'', bahan:'', riwayat:''}, day:todayStr(), started:false, dest:'', unit:{}, su:'kg'};
+const ui = {tab:'stok', type:'masuk', month:thisMonth(), filter:'semua', draft:{date:todayStr(), fruit:''}, dirty:false, sub:'stok', stype:'masuk', sdraft:{date:todayStr(), item:''}, rsub:'buah', tmode:'minggu', q:{stok:'', bahan:'', riwayat:''}, day:todayStr(), started:false, dest:'', unit:{}, su:'kg', rd:{from:'', to:''}};
 // Satuan terakhir yang dipakai di form dan tampilan stok (kg atau gram), per perangkat
 (function(){ try{ const u = JSON.parse(localStorage.getItem('sb.units')||'null'); if(u){ ui.unit = u.unit||{}; ui.su = u.su==='g'?'g':'kg'; ui.dest = u.dest||''; } }catch(e){} })();
 function saveUnits(){ try{ localStorage.setItem('sb.units', JSON.stringify({unit:ui.unit, su:ui.su, dest:ui.dest})); }catch(e){} }
@@ -152,7 +174,7 @@ function saveUnits(){ try{ localStorage.setItem('sb.units', JSON.stringify({unit
 const uidNow = () => st.session ? st.session.user.id : '';
 const ck = () => 'sb.cache.'+uidNow(), qk = () => 'sb.queue.'+uidNow(), rk = () => 'sb.rej.'+uidNow();
 function saveCache(){
-  LS.set(ck(), {me:st.me, profiles:st.profiles, fruits:st.fruits, settings:st.settings, cursor:st.cursor, lastSync:st.lastSync, entries:Array.from(st.entries.values()), supplies:st.supplies, sCursor:st.sCursor, migrated:st.migrated, migrated2:st.migrated2, sEntries:Array.from(st.sEntries.values()), reviews:st.reviews, migrated5:st.migrated5, migrated6:st.migrated6, migrated7:st.migrated7});
+  LS.set(ck(), {me:st.me, profiles:st.profiles, fruits:st.fruits, settings:st.settings, cursor:st.cursor, lastSync:st.lastSync, entries:Array.from(st.entries.values()), supplies:st.supplies, sCursor:st.sCursor, migrated:st.migrated, migrated2:st.migrated2, sEntries:Array.from(st.sEntries.values()), reviews:st.reviews, migrated5:st.migrated5, migrated6:st.migrated6, migrated7:st.migrated7, migrated8:st.migrated8});
 }
 function saveQueue(){ LS.set(qk(), st.queue); LS.set(rk(), st.rejected); st.ver++; }
 function bump(){ st.ver++; }
@@ -164,7 +186,7 @@ function loadLocal(){
     st.entries = new Map((c.entries||[]).map(e=>[e.id,e]));
     st.supplies = c.supplies||[]; st.sCursor = c.sCursor||0; st.migrated = c.migrated!==false; st.migrated2 = c.migrated2===true;
     st.sEntries = new Map((c.sEntries||[]).map(e=>[e.id,e]));
-    st.reviews = c.reviews||[]; st.migrated5 = c.migrated5===true; st.migrated6 = c.migrated6===true; st.migrated7 = c.migrated7===true;
+    st.reviews = c.reviews||[]; st.migrated5 = c.migrated5===true; st.migrated6 = c.migrated6===true; st.migrated7 = c.migrated7===true; st.migrated8 = c.migrated8===true;
   }
   st.queue = LS.get(qk(), []); st.rejected = LS.get(rk(), []);
   bump();
@@ -371,7 +393,7 @@ function monthStats(m){
 function detail(e){
   const p = [];
   if(e.pcs!=null && e.type!=='koreksi' && e.kg!=null) p.push(kg(Number(e.kg)));
-  if(e.type==='masuk'){ if(e.price) p.push(rp(e.price)+'/kg'); if(e.origin) p.push(e.origin); }
+  if(e.type==='masuk'){ if(e.price) p.push(rp(e.price)+'/kg'); if(e.origin) p.push(e.origin); if(e.ripe_date) p.push('estimasi siap '+dateLabel(e.ripe_date)); }
   if(e.type==='produksi' || e.type==='frozen'){ if(e.kg_net!=null){ const n = Number(e.kg_net), g = Number(e.kg); p.push('bersih '+kg(n)+', hasil '+pct(g>0?n/g*100:0)); } if(e.type==='produksi' && e.menu) p.push(e.menu); }
   if(e.type==='eceran' && e.price) p.push(rp(e.price)+'/kg');
   if(e.type==='waste'){ p.push(CATS[e.category]||e.category); p.push('tahap '+(STAGES[e.stage]||e.stage).toLowerCase()); }
@@ -385,7 +407,7 @@ function detail(e){
    Antrean pengiriman (offline) dan sinkronisasi
    ===================================================================== */
 const INS_KEYS = ['id','entry_date','type','fruit_id','kg','price','origin','menu','category','stage','note','created_by'];
-const insPayload = r => { const o = {}; INS_KEYS.forEach(k => { o[k] = r[k]===undefined ? null : r[k]; }); if(r.kg_net!=null) o.kg_net = r.kg_net; if(r.pcs!=null) o.pcs = r.pcs; return o; };
+const insPayload = r => { const o = {}; INS_KEYS.forEach(k => { o[k] = r[k]===undefined ? null : r[k]; }); if(r.kg_net!=null) o.kg_net = r.kg_net; if(r.pcs!=null) o.pcs = r.pcs; if(r.ripe_date) o.ripe_date = r.ripe_date; return o; };
 const SINS_KEYS = ['id','entry_date','type','supply_id','qty','price','note','created_by'];
 const sinsPayload = r => { const o = {}; SINS_KEYS.forEach(k => { o[k] = r[k]===undefined ? null : r[k]; }); if(r.loc!=null) o.loc = r.loc; return o; };
 
@@ -526,6 +548,9 @@ async function pull(){
     if(e.net || e.auth) throw e;
     st.reviews = []; st.migrated5 = false;
   }
+  // 8-update.sql: kolom estimasi masak (ripe_date) pada catatan masuk
+  try{ await jget('/rest/v1/entries?select=ripe_date&limit=1'); st.migrated8 = true; }
+  catch(e){ if(e.net || e.auth) throw e; st.migrated8 = false; }
   st.cursor = maxMs;
   st.me = me[0] || null; st.profiles = profiles; st.fruits = fruits;
   st.settings = settings[0] || {waste_target:null};
@@ -662,14 +687,16 @@ function viewStok(){
   const ms = monthStats(thisMonth());
   // Daftar ringkas: satu baris per buah, detail terbuka saat baris diketuk.
   // Urutan: yang bermasalah (minus) dulu, lalu yang ada stoknya, lalu yang kosong.
-  const dapurM = monthStats(thisMonth()).dapur;
+  const dapurM = monthStats(thisMonth()).dapur, ripeL = ripeStatus();
   const rank = f => { const r = s[f.id]; return (r.stok<0 || (st.migrated2 && r.freezer<0)) ? 0 : (r.stok>0 || (st.migrated2 && r.freezer>0)) ? 1 : 2; };
   const rowsFor = () => list.filter(f => matchQ(ui.q.stok, f.name)).sort((a,b)=>rank(a)-rank(b) || a.name.localeCompare(b.name,'id')).map(f => {
     const r = s[f.id], neg = r.stok < 0;
     if(f.hidden && r.stok===0 && !r.freezer) return '';
     const fneg = st.migrated2 && r.freezer < 0, hasF = st.migrated2 && (r.frozen>0 || r.dari_freezer>0);
     const empty = !neg && !fneg && r.stok<=0 && !(hasF && r.freezer>0);
-    const pill = (neg||fneg) ? '<span class="pill st-minus">Minus</span>' : empty ? '<span class="pill st-nodata">Kosong</span>' : '';
+    const rp0 = ripeL.find(x=>x.f.id===f.id && x.st!=='wait');
+    const pill = (neg||fneg) ? '<span class="pill st-minus">Minus</span>' : empty ? '<span class="pill st-nodata">Kosong</span>'
+      : rp0 ? (rp0.st==='late' ? '<span class="pill st-habis">Lewat masak</span>' : '<span class="pill st-aman">Siap proses</span>') : '';
     const P = isPcs(f), main = P ? fpcs(r.stokPcs) : wt(r.stok), dp = dapurM[f.id];
     return `<details class="sr ${neg||fneg?'neg':''} ${empty?'zero':''}">
       <summary><span class="sr-n">${esc(f.name)}</span>
@@ -703,7 +730,7 @@ function viewStok(){
       <div><span class="lbl">Total stok sekarang</span><strong>${wt(total)}</strong></div>
       <div class="w"><span class="lbl">Waste ${esc(monthLabel(thisMonth()))} (tanpa kupas)</span><strong>${ms.pct==null?'–':pct(ms.pct)}</strong></div>
       ${st.migrated2?`<div class="fz"><span class="lbl">Total di freezer (bersih)</span><strong>${wt(totalF)}</strong><span class="lbl">${bks(totalF)}</span></div>`:''}
-    </section>${lowBox()}
+    </section>${ripeBox()}${lowBox()}
     ${nNeg?`<div class="card neg-box"><strong>${nNeg} buah stoknya minus.</strong> <span class="hint">Biasanya karena catatan masuk belum diisi. Ada di urutan teratas.</span></div>`:''}
     ${canManage()?'<button class="btn pri" data-act="tab" data-v="opname">Opname semua buah</button>':''}
     <div class="row su-row"><span class="hint">Tampilkan berat dalam</span><div class="chips" role="group" aria-label="Satuan berat">${[['kg','kg'],['g','gram']].map(([k,l])=>`<button type="button" class="chip" data-act="su" data-v="${k}" aria-pressed="${ui.su===k}">${l}</button>`).join('')}</div></div>
@@ -713,6 +740,35 @@ function viewStok(){
 /* =====================================================================
    Tampilan: Catat
    ===================================================================== */
+// Status pemeraman: batch buah masuk yang masih ada di gudang (FIFO: yang masuk lebih dulu dianggap keluar lebih dulu)
+function ripeStatus(){
+  const d = derived(), s = stock(), today = todayStr(), out = [];
+  const byFruit = {};
+  d.live.forEach(e => { if(e.type==='masuk') (byFruit[e.fruit_id] = byFruit[e.fruit_id] || []).push(e); });
+  Object.entries(byFruit).forEach(([fid, list]) => {
+    const f = d.fmap[fid], r = s[fid]; if(!f || !r) return;
+    const P = isPcs(f), qty = e => P ? pcsOf(e, f) : Number(e.kg||0);
+    let left = P ? r.stokPcs : r.stok; if(!(left>0)) return;
+    list.sort((a,b)=>b.entry_date.localeCompare(a.entry_date) || Date.parse(b.created_at)-Date.parse(a.created_at));
+    for(const e of list){
+      if(left<=0.001) break;
+      const q = Math.min(qty(e), left); left -= q;
+      if(!e.ripe_date || q<=0) continue;
+      const days = daysBetween(today, e.ripe_date);
+      out.push({f, e, q, P, days, st: days < -RIPE_LATE ? 'late' : days<=0 ? 'now' : 'wait'});
+    }
+  });
+  return out.sort((a,b)=>a.days-b.days);
+}
+const ripeTxt = x => x.st==='late' ? `lewat ${-x.days} hari` : x.days===0 ? 'siap hari ini' : x.days<0 ? `siap sejak ${-x.days} hari lalu` : x.days===1 ? 'besok' : `${x.days} hari lagi`;
+function ripeBox(){
+  const l = ripeStatus(); if(!l.length) return '';
+  const ready = l.filter(x=>x.st!=='wait').length;
+  const items = l.slice(0,8).map(x=>`<div class="ripe-i ${x.st}"><span><strong>${esc(x.f.name)}</strong> ${x.P?fpcs(x.q):kg(x.q)}<br><span class="hint">masuk ${esc(dateLabel(x.e.entry_date))}</span></span><b>${ripeTxt(x)}</b></div>`).join('');
+  return `<section class="card ripe-box"><h2>${ready?`${ready} batch siap diproses atau dibekukan`:'Status pemeraman'}</h2><div class="ripe-l">${items}</div>
+    ${l.length>8?`<p class="hint" style="margin-top:6px">Dan ${l.length-8} batch lainnya.</p>`:''}
+    <p class="hint" style="margin-top:8px">Dari estimasi saat catat buah masuk. Batch yang lebih dulu masuk dianggap sudah terpakai lebih dulu.</p></section>`;
+}
 function lowBox(){
   const l = lowSupplies(); if(!l.length) return '';
   return `<button type="button" class="card low" data-act="goto-bahan" style="text-align:left;cursor:pointer"><strong>${l.length} bahan hampir habis</strong><br><span class="hint">${esc(l.slice(0,3).map(s=>s.name).join(', '))}${l.length>3?', dan lainnya':''}. Ketuk untuk melihat.</span></button>`;
@@ -779,7 +835,12 @@ function viewCatat(){
   let extra = '';
   if(t==='masuk') extra = `
     <div class="field"><label for="f-price" id="f-price-l">Harga beli per kg (Rp), boleh kosong</label><input id="f-price" name="price" type="number" inputmode="numeric" min="0" step="any"></div>
-    <div class="field"><label for="f-origin">Asal atau supplier, boleh kosong</label><input id="f-origin" name="origin" type="text" autocomplete="off"></div>`;
+    <div class="field"><label for="f-origin">Asal atau supplier, boleh kosong</label><input id="f-origin" name="origin" type="text" autocomplete="off"></div>
+    <div class="field"><label for="f-ripe" id="f-ripe-l">Estimasi siap diproses (hari lagi), boleh kosong</label>
+      ${st.migrated8?`<div class="kg"><input id="f-ripe" name="ripe" type="number" inputmode="numeric" min="0" max="60" step="1" placeholder="–"><span>hari</span></div>
+      <div class="chips wrap" id="f-ripe-q"></div>`:''}
+      <div id="f-ripe-tip"></div>
+      ${!st.migrated8&&canManage()?'<p class="hint">Kolom estimasi aktif setelah 8-update.sql dijalankan di Supabase.</p>':''}</div>`;
   if(t==='kupas') extra = `
     <div class="field"><label for="f-net">Berat bersih setelah dikupas</label>
       <div class="kg"><input id="f-net" name="net" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><select id="f-nu" name="nu" class="u-sel" aria-label="Satuan berat bersih">${optHtml([['kg','kg'],['g','gram']], ui.unit.net||'kg')}</select></div>
@@ -853,7 +914,19 @@ function updateSplit(){
   box.classList.remove('bad');
   box.innerHTML = `Freezer <b>${kg(z)}</b> (${bks(z)}), dapur <b>${kg(n-z)}</b>.`;
 }
-function refreshForm(){ updateQtyUnit(); updateYield(); updateFreezerHint(); updateSplit(); }
+function refreshForm(){ updateQtyUnit(); updateYield(); updateFreezerHint(); updateSplit(); updateRipeTip(); }
+// Saran pemeraman saat catat buah masuk, dari acuan umum + data sendiri
+function updateRipeTip(){
+  const box = $('#f-ripe-tip'); if(!box) return;
+  const fi = $('#f-fruit'), name = fi ? normName(fi.value) : '', ref = ripeRef(name), q = $('#f-ripe-q');
+  if(!name){ box.innerHTML = ''; if(q) q.innerHTML = ''; return; }
+  if(!ref){ box.innerHTML = `<p class="hint">Belum ada acuan untuk ${esc(name)}. Isi sesuai pengalaman, atau kosongkan.</p>`; if(q) q.innerHTML = ''; return; }
+  const lbl = $('#f-ripe-l');
+  if(lbl) lbl.textContent = (ref.peram ? 'Estimasi siap diproses' : 'Batas simpan, proses sebelum') + ' (hari lagi), boleh kosong';
+  box.innerHTML = `<p class="tip"><b>${esc(name)}:</b> ${ref.peram?`biasanya siap diproses <b>${ref.min}-${ref.max} hari</b> setelah dibeli kalau masih mengkal (suhu ruang).`:`tidak diperam, aman disimpan sekitar <b>${ref.min}-${ref.max} hari</b>.`} ${esc(ref.olah)}<br><span class="hint">Acuan umum, sesuaikan dengan kondisi buah saat datang.</span></p>`;
+  if(q){ const vals = [...new Set([0, ref.min, Math.round((ref.min+ref.max)/2), ref.max])];
+    q.innerHTML = vals.map(v=>`<button type="button" class="chip" data-act="ripe-q" data-v="${v}">${v===0?'Sudah siap':v+' hari'}</button>`).join(''); }
+}
 
 async function submitEntry(form){
   const fd = new FormData(form), t = ui.type;
@@ -881,7 +954,12 @@ async function submitEntry(form){
   const price = okP ? (pcsF ? (kgv>0 ? r2(priceIn*pcs/kgv) : null) : priceIn) : null;
   const pNote = okP && pcsF && !(kgv>0) ? `Harga ${rp(priceIn)}/pcs` : null;
   let rows = [], net = null;
-  if(t==='masuk'){ const o = String(fd.get('origin')||'').trim(); rows = [mk('masuk', kgv, {price, origin:o||null, pcs, note:pNote})]; }
+  if(t==='masuk'){
+    const o = String(fd.get('origin')||'').trim(), rv = String(fd.get('ripe')||'').trim(), rd = parseInt(rv,10);
+    let ripe_date = null;
+    if(rv!==''){ if(!isFinite(rd) || rd<0 || rd>60) errs.push('Estimasi siap diproses diisi 0 sampai 60 hari, atau kosongkan.'); else ripe_date = date ? addDays(date, rd) : null; }
+    rows = [mk('masuk', kgv, {price, origin:o||null, pcs, note:pNote, ripe_date})];
+  }
   if(t==='eceran') rows = [mk('eceran', kgv, {price, pcs, note:pNote})];
   if(t==='dapur'){
     if(kgv==null) errs.push(`Timbang ${known?known.name:'buah'} dan isi beratnya (wajib untuk catatan ke dapur).`);
@@ -925,7 +1003,7 @@ async function submitEntry(form){
       }
     }
   }
-  rows.forEach(r => { if(r.pcs==null || !st.migrated6) delete r.pcs; });
+  rows.forEach(r => { if(r.pcs==null || !st.migrated6) delete r.pcs; if(!r.ripe_date || !st.migrated8) delete r.ripe_date; });
   if(rows.some(r => !allowedTypes().includes(r.type))) errs.push('Perananmu tidak bisa membuat catatan ini.');
   const box = $('#f-err');
   if(errs.length){ box.innerHTML = `<div class="err" role="alert"><ul>${errs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`; box.scrollIntoView({block:'center'}); return; }
@@ -1285,18 +1363,27 @@ function viewLaporan(){
    Tampilan: Riwayat
    ===================================================================== */
 function viewRiwayat(){
-  const f = ui.filter;
-  const listFor = () => derived().live.filter(e=>f==='semua'||e.type===f)
+  const f = ui.filter, rd = ui.rd, today = todayStr();
+  const typeOk = e => f==='semua' || (f==='dapur' ? isDirect(e) : f==='produksi' ? (e.type==='produksi' && !isDirect(e)) : e.type===f);
+  const dateOk = e => (!rd.from || e.entry_date>=rd.from) && (!rd.to || e.entry_date<=rd.to);
+  const listFor = () => derived().live.filter(typeOk).filter(dateOk)
     .filter(e=>matchQ(ui.q.riwayat, fruitName(e.fruit_id), typeLbl(e), detail(e), dateLabel(e.entry_date), e.entry_date))
     .sort((a,b)=>b.entry_date.localeCompare(a.entry_date)||Date.parse(b.created_at)-Date.parse(a.created_at));
-  const chips = ['semua','masuk','produksi'].concat(st.migrated2?['frozen','dari_freezer']:[]).concat(['eceran','waste','koreksi']).map(k=>`<button class="chip" data-act="filter" data-v="${k}" aria-pressed="${k===f}">${k==='semua'?'Semua':TYPES[k].label}</button>`).join('');
+  const chips = ['semua','masuk','produksi','dapur'].concat(st.migrated2?['frozen','dari_freezer']:[]).concat(['eceran','waste','koreksi']).map(k=>`<button class="chip" data-act="filter" data-v="${k}" aria-pressed="${k===f}">${k==='semua'?'Semua':k==='dapur'?'Ke dapur':TYPES[k].label}</button>`).join('');
+  // Filter tanggal transaksi: pilihan cepat + rentang bebas
+  const quick = [['all','Semua tanggal','',''],['today','Hari ini',today,today],['yday','Kemarin',addDays(today,-1),addDays(today,-1)],['7d','7 hari',addDays(today,-6),today],['month','Bulan ini',thisMonth()+'-01',today]];
+  const qSel = (quick.find(([,,a,b])=>a===rd.from && b===rd.to)||[''])[0];
+  const dchips = quick.map(([k,l,a,b])=>`<button class="chip" data-act="rd" data-from="${a}" data-to="${b}" aria-pressed="${k===qSel}">${l}</button>`).join('');
+  const dsec = `<div class="dfilter"><div class="chips">${dchips}</div>
+    <div class="drange"><input type="date" id="rd-from" value="${esc(rd.from)}" max="${today}" aria-label="Dari tanggal"><span>sampai</span><input type="date" id="rd-to" value="${esc(rd.to)}" max="${today}" aria-label="Sampai tanggal">
+    ${rd.from||rd.to?'<button type="button" class="btn sm ghost" data-act="rd" data-from="" data-to="">Hapus filter</button>':''}</div></div>`;
   const rowsFor = list => list.slice(0,150).map(e=>`<div class="he ${e._p?'pend':''}"><div class="he-b">
       <div class="he-t"><span class="badge b-${e.type}">${esc(typeLbl(e))}</span><strong>${esc(fruitName(e.fruit_id))}</strong>${e._p?'<span class="badge b-pend">Belum terkirim</span>':''}</div>
       <span class="he-d">${esc(dateLabel(e.entry_date))}, ${esc(detail(e))}</span></div>
       <div style="text-align:right"><div class="he-k">${qtyLbl(e)}</div>${canDelete(e)?`<button class="x" data-act="del" data-id="${esc(e.id)}">Hapus</button>`:''}</div></div>`).join('');
   window.__rwList = () => { const list = listFor(), n = $('#rw-n'); if(n) n.textContent = list.length+' catatan'; return list.length?`<div class="hist">${rowsFor(list)}</div>${list.length>150?'<p class="hint">Menampilkan 150 catatan terbaru. Unduh CSV di tab Laporan untuk data lengkap.</p>':''}`:`<section class="card empty"><h2>${ui.q.riwayat?'Tidak ada catatan yang cocok':'Belum ada catatan'}</h2><p>${ui.q.riwayat?'Coba kata lain, misalnya nama buah, jenis catatan, atau tanggal.':'Catatan yang disimpan semua staf akan muncul di sini.'}</p></section>`; };
   return `<div class="row" style="justify-content:space-between;align-items:center"><div class="hint" id="rw-n">${listFor().length} catatan</div>${canManage()?'<button class="btn sm" data-act="settings">Pengaturan</button>':''}</div>
-    ${searchBar('riwayat','Cari buah, jenis, atau tanggal')}<div class="chips">${chips}</div>
+    ${searchBar('riwayat','Cari buah atau jenis')}${dsec}<div class="chips">${chips}</div>
     <div id="lst">${window.__rwList()}</div>`;
 }
 
@@ -2085,6 +2172,7 @@ function checksFor(day){
       if(isPcs(f) ? r.stokPcs<0 : r.stok<0) out.push({lv:'bad', t:`Stok ${f.name} minus ${isPcs(f)?fpcs(r.stokPcs):kg(r.stok)}`, h:'Catatan masuk kemungkinan belum diisi.'});
       if(st.migrated2 && r.freezer<0) out.push({lv:'bad', t:`Stok freezer ${f.name} minus ${kg(r.freezer)}`, h:'Ada catatan dari freezer tanpa catatan ke freezer.'}); });
     lowSupplies().forEach(x => out.push({lv:'mid', t:`${x.name} hampir habis`, h:`Batas minimum ${fq(Number(x.min_stock),x.unit)}.`}));
+    ripeStatus().filter(x=>x.st!=='wait').forEach(x => out.push({lv: x.st==='late'?'bad':'mid', t:`${x.f.name} ${x.P?fpcs(x.q):kg(x.q)} ${ripeTxt(x)}`, h:`Masuk ${dateLabel(x.e.entry_date)}. Proses atau bekukan supaya tidak jadi waste.`}));
   }
   live.forEach(e => {
     const y = yieldOff(e);
@@ -2262,7 +2350,7 @@ async function startSession(){
   st.me = null; st.profiles = []; st.fruits = []; st.entries = new Map(); st.settings = {waste_target:null};
   st.cursor = 0; st.lastSync = 0; st.netFail = false; st.ready = false;
   st.supplies = []; st.sEntries = new Map(); st.sCursor = 0; st.migrated = true; st.migrated2 = false;
-  st.reviews = []; st.migrated5 = false; st.migrated6 = false; st.migrated7 = false; ui.started = false; ui.day = todayStr();
+  st.reviews = []; st.migrated5 = false; st.migrated6 = false; st.migrated7 = false; st.migrated8 = false; ui.started = false; ui.day = todayStr();
   const cached = loadLocal();
   if(cached && st.me){ st.ready = true; enterApp(); sync(); return; }
   showLoading();
@@ -2294,7 +2382,7 @@ document.addEventListener('click', async ev => {
   else if(a==='rsub'){ ui.rsub = v; render(); }
   else if(a==='day'){ const nd = addDays(ui.day, Number(v)); if(nd<=todayStr()){ ui.day = nd; render(); } }
   else if(a==='goto-day'){ ui.day = v; render(); window.scrollTo(0,0); }
-  else if(a==='day-riwayat'){ ui.q.riwayat = ui.day; ui.filter = 'semua'; ui.tab = 'riwayat'; render(); window.scrollTo(0,0); }
+  else if(a==='day-riwayat'){ ui.q.riwayat = ''; ui.rd = {from:ui.day, to:ui.day}; ui.filter = 'semua'; ui.tab = 'riwayat'; render(); window.scrollTo(0,0); }
   else if(a==='paraf'){ doParaf(); }
   else if(a==='unparaf'){ undoParaf(); }
   else if(a==='op-cancel'){ ui.tab = 'stok'; render(); window.scrollTo(0,0); }
@@ -2305,6 +2393,8 @@ document.addEventListener('click', async ev => {
   else if(a==='su'){ ui.su = v; saveUnits(); render(); }
   else if(a==='month'){ ui.month = addMonths(ui.month, Number(v)); render(); }
   else if(a==='filter'){ ui.filter = v; render(); }
+  else if(a==='ripe-q'){ const i = $('#f-ripe'); if(i){ i.value = v; document.querySelectorAll('[data-act="ripe-q"]').forEach(x=>x.setAttribute('aria-pressed', x===b?'true':'false')); } }
+  else if(a==='rd'){ ui.rd = {from:b.dataset.from||'', to:b.dataset.to||''}; render(); }
   else if(a==='sync'){
     if(st.rejected.length) openRejected(); else { if(dlg.open && b.closest('dialog')) { /* tetap di dialog */ } sync(true); }
   }
@@ -2409,6 +2499,11 @@ document.addEventListener('submit', ev => {
 document.addEventListener('change', ev => {
   const t = ev.target;
   if(t.id==='m'){ if(t.value) ui.month = t.value; render(); }
+  else if(t.id==='rd-from' || t.id==='rd-to'){
+    const fr = ($('#rd-from')||{}).value||'', to = ($('#rd-to')||{}).value||'';
+    ui.rd = (fr && to && fr>to) ? {from:to, to:fr} : {from:fr, to};   // tukar kalau terbalik
+    render();
+  }
   else if(t.id==='d-day'){ if(t.value && t.value<=todayStr()){ ui.day = t.value; } render(); }
   else if(t.id==='f-date') ui.draft.date = t.value;
   else if(t.id==='f-fruit'){ ui.draft.fruit = t.value; refreshForm(); }
