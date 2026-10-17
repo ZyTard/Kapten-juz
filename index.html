@@ -124,6 +124,13 @@ const timeLabel = ms => new Date(ms).toLocaleTimeString('id-ID',{hour:'2-digit',
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
 const normName = s => cap(String(s==null?'':s).trim().replace(/\s+/g,' '));
+// Login staf memakai username. Supabase tetap butuh email, jadi username diubah menjadi alamat internal
+// di bawah domain aplikasi sendiri (tidak ada email yang dikirim ke alamat ini).
+const STAFF_DOMAIN = 'staf.kaptenjuz.vercel.app';
+const USER_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
+const toLoginEmail = v => { v = String(v||'').trim().toLowerCase(); return v.includes('@') ? v : v+'@'+STAFF_DOMAIN; };
+const loginName = em => { em = String(em||''); const sfx = '@'+STAFF_DOMAIN; return em.toLowerCase().endsWith(sfx) ? em.slice(0, -sfx.length) : em; };
+const loginLbl = em => loginName(em)===em ? 'Email: '+em : 'Username: '+loginName(em);
 const initials = n => String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
 const uuid = () => {
   if(crypto.randomUUID) return crypto.randomUUID();
@@ -613,7 +620,7 @@ function showLogin(msg){
   app.innerHTML = `<section class="login">
     <div class="lg-brand"><img class="lg-logo" src="logo-full.png" alt="Kapten Juz" width="640" height="192"><h1>Stok Buah Kapten Juz</h1><p>Masuk dengan akun yang dibuat manager.</p></div>
     <form id="f-login" class="card form" novalidate>
-      <div class="field"><label for="l-email">Email</label><input id="l-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off"></div>
+      <div class="field"><label for="l-email">Username</label><input id="l-email" name="email" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next"><p class="hint">Manager atau owner boleh memakai email.</p></div>
       <div class="field"><label for="l-pw">Kata sandi</label><input id="l-pw" name="password" type="password" autocomplete="current-password"></div>
       <div id="l-err">${msg?`<div class="err" role="alert">${esc(msg)}</div>`:''}</div>
       <button class="btn pri" type="submit">Masuk</button>
@@ -1396,7 +1403,7 @@ function viewStaf(){
     const self = p.id===me.id;
     return `<article class="sc ${p.active?'':'off'}">
       <div class="sc-t"><strong>${esc(p.full_name)}</strong>${self?'<span class="hint">(kamu)</span>':''}<span class="badge r-${esc(p.role)}">${esc(ROLE[p.role]||p.role)}</span>${p.active?'':'<span class="tag off">Nonaktif</span>'}</div>
-      <span class="hint">${esc(p.email)}</span>
+      <span class="hint">${esc(loginLbl(p.email))}</span>
       <div class="row" style="justify-content:flex-start">
         <button class="btn sm" data-act="staff-edit" data-id="${esc(p.id)}">Ubah</button>
         <button class="btn sm" data-act="staff-pw" data-id="${esc(p.id)}">Reset sandi</button>
@@ -1410,8 +1417,9 @@ function viewStaf(){
       <table class="perm"><tbody>
         <tr><td>Manager</td><td>Semua catatan, laporan, kelola staf, daftar buah, target waste, hapus catatan siapa pun</td></tr>
         <tr><td>Admin</td><td>Semua jenis catatan, opname stok, laporan, daftar buah</td></tr>
-        <tr><td>Produksi</td><td>Catat keluar ke produksi dan waste; lihat stok dan laporan</td></tr>
-        <tr><td>Kasir</td><td>Catat penjualan eceran dan waste; lihat stok dan laporan</td></tr>
+        <tr><td>Produksi</td><td>Catat kupas, ke dapur, dari freezer, waste, dan pemakaian bahan</td></tr>
+        <tr><td>Kasir</td><td>Catat penjualan eceran, waste, dan pemakaian bahan</td></tr>
+        <tr><td>Owner</td><td>Lihat stok, laporan, riwayat, ringkasan harian, dan paraf; tidak mencatat</td></tr>
       </tbody></table>
       <p class="hint" style="margin-top:8px">Semua staf bisa menghapus catatannya sendiri dalam 24 jam. Staf yang sudah punya catatan sebaiknya dinonaktifkan, bukan dihapus, agar riwayat tetap utuh.</p></section>`;
 }
@@ -1420,7 +1428,8 @@ function roleOptions(sel){ return Object.entries(ROLE).filter(([k])=>k!=='owner'
 function openStaffNew(){
   openDlg(`<form id="f-staff-new" class="dl" novalidate><h2>Tambah staf</h2>
     <div class="field"><label for="n-full">Nama lengkap</label><input id="n-full" name="full_name" type="text" autocomplete="off"></div>
-    <div class="field"><label for="n-email">Email</label><input id="n-email" name="email" type="email" autocomplete="off" inputmode="email" autocapitalize="off"></div>
+    <div class="field"><label for="n-email">Username untuk login</label><input id="n-email" name="email" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Contoh: abel">
+      <p class="hint">Huruf kecil, angka, titik, strip, atau garis bawah; 3-30 karakter, tanpa spasi. Boleh juga diisi email untuk manager atau owner.</p></div>
     <div class="field"><label for="n-role">Peran</label><select id="n-role" name="role">${roleOptions('kasir')}</select></div>
     <div class="field"><label for="n-pw">Kata sandi sementara (minimal 8 karakter)</label>
       <div class="row" style="flex-wrap:nowrap"><input id="n-pw" name="password" type="text" autocomplete="off"><button type="button" class="btn" data-act="genpw" data-t="#n-pw">Buat acak</button></div></div>
@@ -1429,10 +1438,14 @@ function openStaffNew(){
 }
 async function submitStaffNew(form){
   const fd = new FormData(form);
-  const p = {action:'create', full_name:String(fd.get('full_name')||'').trim(), email:String(fd.get('email')||'').trim().toLowerCase(), role:String(fd.get('role')||''), password:String(fd.get('password')||'')};
+  const raw = String(fd.get('email')||'').trim().toLowerCase();
+  const p = {action:'create', full_name:String(fd.get('full_name')||'').trim(), email:toLoginEmail(raw), role:String(fd.get('role')||''), password:String(fd.get('password')||'')};
   const errs = [];
   if(!p.full_name) errs.push('Isi nama lengkap.');
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) errs.push('Isi email yang valid.');
+  if(!raw) errs.push('Isi username.');
+  else if(raw.includes('@')){ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) errs.push('Format email tidak valid.'); }
+  else if(!USER_RE.test(raw)) errs.push('Username 3-30 karakter: huruf kecil, angka, titik, strip, atau garis bawah, tanpa spasi.');
+  if(!raw.includes('@') && st.profiles.some(x=>String(x.email).toLowerCase()===p.email)) errs.push('Username ini sudah dipakai.');
   if(p.password.length<8) errs.push('Kata sandi minimal 8 karakter.');
   if(errs.length){ $('#s-err').innerHTML = `<div class="err" role="alert"><ul>${errs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`; return; }
   const btn = form.querySelector('button[type=submit]'); btn.disabled = true;
@@ -1440,7 +1453,7 @@ async function submitStaffNew(form){
   btn.disabled = false;
   if(ok){
     openDlg(`<div class="dl"><h2>Akun dibuat</h2><p>Sampaikan data ini ke ${esc(p.full_name)}. Minta dia mengganti kata sandi lewat menu Akun setelah login.</p>
-      <div class="cred"><span>Email: ${esc(p.email)}</span><span>Kata sandi: ${esc(p.password)}</span><span>Peran: ${esc(ROLE[p.role])}</span></div>
+      <div class="cred"><span>${esc(loginLbl(p.email))}</span><span>Kata sandi: ${esc(p.password)}</span><span>Peran: ${esc(ROLE[p.role])}</span></div>
       <div class="row"><button class="btn pri" data-act="close">Selesai</button></div></div>`);
     render();
   }
@@ -1451,7 +1464,7 @@ function openStaffEdit(id){
   openDlg(`<form id="f-staff-edit" class="dl" data-id="${esc(id)}" novalidate><h2>Ubah staf</h2>
     <div class="field"><label for="e-full">Nama lengkap</label><input id="e-full" name="full_name" type="text" value="${esc(p.full_name)}"></div>
     <div class="field"><label for="e-role">Peran</label><select id="e-role" name="role" ${self?'disabled':''}>${roleOptions(p.role)}</select>${self?'<p class="hint">Kamu tidak bisa mengubah perananmu sendiri.</p>':''}</div>
-    <p class="hint">Email: ${esc(p.email)}</p>
+    <p class="hint">${esc(loginLbl(p.email))}</p>
     <div id="s-err"></div>
     <div class="row"><button type="button" class="btn ghost" data-act="close">Batal</button><button class="btn pri" type="submit">Simpan</button></div></form>`);
 }
@@ -1481,7 +1494,7 @@ async function submitStaffPw(form){
   const ok = await mgmt(async()=>{ await staffCall({action:'reset_password', id, password:pw}); }, null, '#s-err');
   if(ok){
     openDlg(`<div class="dl"><h2>Kata sandi diganti</h2><p>Sampaikan kata sandi baru ini ke ${esc(p?p.full_name:'staf')}.</p>
-      <div class="cred"><span>Kata sandi: ${esc(pw)}</span></div><div class="row"><button class="btn pri" data-act="close">Selesai</button></div></div>`);
+      <div class="cred">${p?`<span>${esc(loginLbl(p.email))}</span>`:''}<span>Kata sandi: ${esc(pw)}</span></div><div class="row"><button class="btn pri" data-act="close">Selesai</button></div></div>`);
   }
 }
 
@@ -1664,7 +1677,7 @@ async function importLegacy(){
 function openAccount(){
   const me = st.me;
   openDlg(`<div class="dl"><h2>${esc(me?me.full_name:'Akun')}</h2>
-    <p>${esc(me?ROLE[me.role]:'')}${me?', ':''}${esc(st.session?st.session.user.email:'')}</p>
+    <p>${esc(me?ROLE[me.role]:'')}${me?', ':''}${esc(st.session?loginLbl(st.session.user.email).replace(/^(Email|Username): /,''):'')}</p>
     <div class="row" style="justify-content:space-between;align-items:center">
       <span class="hint">${st.lastSync?'Terakhir sinkron pukul '+timeLabel(st.lastSync):'Belum pernah sinkron'}${st.queue.length?`, ${st.queue.length} belum terkirim`:''}</span>
       <button class="btn sm" type="button" data-act="sync">Sinkronkan</button></div>
@@ -2327,9 +2340,10 @@ function enterApp(){
    ===================================================================== */
 async function doLogin(form){
   const fd = new FormData(form);
-  const email = String(fd.get('email')||'').trim().toLowerCase(), pw = String(fd.get('password')||'');
+  const raw = String(fd.get('email')||'').trim(), pw = String(fd.get('password')||'');
   const err = $('#l-err');
-  if(!email || !pw){ err.innerHTML = '<div class="err" role="alert">Isi email dan kata sandi.</div>'; return; }
+  if(!raw || !pw){ err.innerHTML = '<div class="err" role="alert">Isi username dan kata sandi.</div>'; return; }
+  const email = toLoginEmail(raw);
   if(!navigator.onLine){ err.innerHTML = '<div class="err" role="alert">Butuh internet untuk login.</div>'; return; }
   const btn = form.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Masuk...';
   let res;
@@ -2339,7 +2353,7 @@ async function doLogin(form){
     btn.disabled = false; btn.textContent = 'Masuk';
     let j = {}; try{ j = await res.json(); }catch(e){}
     const banned = j.error_code==='user_banned' || /banned/i.test(j.msg||j.message||'');
-    const text = banned ? 'Akun ini dinonaktifkan. Hubungi manager.' : (res.status===400||res.status===401 ? 'Email atau kata sandi salah.' : 'Gagal masuk (kode '+res.status+'). Coba lagi.');
+    const text = banned ? 'Akun ini dinonaktifkan. Hubungi manager.' : (res.status===400||res.status===401 ? 'Username atau kata sandi salah.' : 'Gagal masuk (kode '+res.status+'). Coba lagi.');
     err.innerHTML = `<div class="err" role="alert">${esc(text)}</div>`;
     return;
   }
