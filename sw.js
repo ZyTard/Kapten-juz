@@ -1,4 +1,4 @@
-const CACHE = 'stokbuah-v15';
+const CACHE = 'stokbuah-v16';
 const FILES = ['./', 'index.html', 'base.css', 'dashboard.css', 'manifest.webmanifest', 'logo-full.png', 'logo-mark.png', 'favicon.png'];
 
 self.addEventListener('install', e => {

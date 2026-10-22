@@ -340,3 +340,7 @@ tr.off td b{color:var(--danger)}
 .ripe-i .hint{white-space:nowrap}
 .tip{background:var(--pucuk-s);border-radius:var(--r-in);padding:10px 12px;font-size:14px;color:#2B3D00}
 .tip b{color:#1E2C00}
+
+/* Tombol aksi di riwayat (Ubah dan Hapus) */
+.he-a{display:flex;gap:14px;justify-content:flex-end;flex-wrap:wrap}
+.he .x.ed{color:var(--leaf,#1F7A57)}
