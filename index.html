@@ -62,7 +62,10 @@ const ROLE_STAGE = {kasir:'eceran', produksi:'produksi', admin:'gudang', manager
 // Hasil kupas acuan (% daging bersih dari berat kotor), dari penimbangan Okt 2026.
 // Dipakai sampai ada minimal 3 catatan produksi buah itu dalam 90 hari terakhir.
 const YIELD_REF = {alpukat:36, mangga:41, nangka:45};
-const YIELD_TOL = 15;      // selisih (poin persen) dari biasanya yang dianggap tidak wajar
+const YIELD_TOL = 15;      // hasil kupas lebih RENDAH dari biasanya sebanyak ini (poin persen) = perlu dicek
+const YIELD_HIGH = 30;     // hasil kupas lebih TINGGI sebanyak ini = kemungkinan salah timbang atau salah ketik
+// low: jauh di bawah biasanya, up: lebih baik dari biasanya (bukan masalah), high: terlalu bagus untuk dipercaya begitu saja
+function yieldDev(p, ref){ const d = p - ref; return d < -YIELD_TOL ? 'low' : d > YIELD_HIGH ? 'high' : d > YIELD_TOL ? 'up' : null; }
 const OPNAME_BIG = 2;      // koreksi opname >= 2 kg masuk daftar "perlu dicek"
 // Acuan umum penyimpanan suhu ruang (tropis, ±28-30°C). Sesuaikan dengan pengalaman di dapur sendiri.
 // peram: true = buah masih bisa matang setelah dibeli (diperam). min-max = hari sampai siap diproses
@@ -1050,8 +1053,9 @@ async function submitEntry(form){
   }
   if(net!=null){
     const ref = yieldRef(known ? known.id : null, fname), p = net/kgv*100;
-    if(ref && Math.abs(p-ref.p) > YIELD_TOL){
-      const ok = await ask('Hasil kupas tidak wajar', `Hasil ${fname} ${pct(p)} (${kg(net)} bersih dari ${kg(kgv)} kotor). Biasanya sekitar ${pct(ref.p)}. Pastikan angkanya tidak salah ketik. Tetap simpan?`, 'Tetap simpan');
+    const dv = ref ? yieldDev(p, ref.p) : null;
+    if(dv==='low' || dv==='high'){
+      const ok = await ask(dv==='low' ? 'Hasil kupas di bawah biasanya' : 'Hasil kupas jauh di atas biasanya', `Hasil ${fname} ${pct(p)} (${kg(net)} bersih dari ${kg(kgv)} kotor). Biasanya sekitar ${pct(ref.p)}. ${dv==='low'?'Pastikan angkanya tidak salah ketik.':'Bagus kalau benar, tapi pastikan timbangan kotor dan bersih tidak tertukar atau salah ketik.'} Tetap simpan?`, 'Tetap simpan');
       if(!ok){ const ni = $('#f-net'); if(ni) ni.focus(); return; }
     }
   }
@@ -1333,7 +1337,7 @@ function viewLapBuah(m, cur, prev){
   const yEntries = Object.entries(cur.yield).sort((a,b)=>b[1].kotor-a[1].kotor);
   const refOf = n => { const fo = findFruit(n); const r = yieldRef(fo ? fo.id : null, n); return r; };
   const yRows = yEntries.map(([n,v])=>{
-    const p = v.bersih/v.kotor*100, ref = refOf(n), off = ref && Math.abs(p-ref.p) > YIELD_TOL;
+    const p = v.bersih/v.kotor*100, ref = refOf(n), off = ref && yieldDev(p, ref.p)==='low';
     return `<tr${off?' class="off"':''}><td>${esc(n)}</td><td class="n">${kg(v.kotor)}</td><td class="n">${kg(v.bersih)}</td><td class="n"><b>${pct(p)}</b></td></tr>`;
   }).join('');
   const yTot = cur.kotor>0 ? `<tr><td><b>Total</b></td><td class="n"><b>${kg(cur.kotor)}</b></td><td class="n"><b>${kg(cur.bersih)}</b></td><td class="n"><b>${pct(cur.rend)}</b></td></tr>` : '';
@@ -1344,7 +1348,7 @@ function viewLapBuah(m, cur, prev){
     <div style="margin-top:12px">${yBars}</div>
     <div class="tw"><table class="fit"><thead><tr><th>Buah</th><th class="n">Kotor</th><th class="n">Bersih</th><th class="n">Rendemen</th></tr></thead><tbody>${yRows?yRows+yTot:'<tr><td colspan="4" class="hint">Belum ada catatan kupas dengan berat bersih bulan ini.</td></tr>'}</tbody></table></div>
     ${noNet.length?`<p class="hint" style="margin-top:8px">Tidak dihitung (kupas tanpa berat bersih, catatan lama): ${noNet.map(([n,k])=>`${esc(n)} ${kg(k)}`).join(', ')}.</p>`:''}
-    <p class="hint" style="margin-top:8px">Acuan: hasil timbang Okt 2026 (alpukat 36%, mangga 41%, nangka 45%), atau rata-rata 90 hari buah itu kalau sudah ada minimal 3 catatan. Baris merah = selisih lebih dari ${YIELD_TOL} poin dari acuan, cek timbangan atau cara kupas.</p></section>`;
+    <p class="hint" style="margin-top:8px">Acuan: hasil timbang Okt 2026 (alpukat 36%, mangga 41%, nangka 45%), atau rata-rata 90 hari buah itu kalau sudah ada minimal 3 catatan. Baris merah = hasil lebih dari ${YIELD_TOL} poin di bawah acuan, cek timbangan atau cara kupas. Hasil di atas acuan tidak ditandai.</p></section>`;
   return `<section class="card kpi"><span class="sub">Waste terkendali ${esc(monthLabel(m))}</span>
       <p class="big">${cur.pct==null?'–':pct(cur.pct)}</p>
       ${cur.pct!=null?meter(cur.pct, isFinite(target)?target:null):''}
@@ -1940,10 +1944,13 @@ function updateYield(){
   if(n>g){ box.textContent = 'Berat bersih lebih besar dari berat kotor. Periksa lagi angkanya.'; box.classList.add('bad'); return; }
   const fi = $('#f-fruit'), f = fi ? findFruit(normName(fi.value)) : null;
   const ref = yieldRef(f ? f.id : null, fi ? normName(fi.value) : ''), p = n/g*100;
-  const off = ref && Math.abs(p-ref.p) > YIELD_TOL;
+  const dv = ref ? yieldDev(p, ref.p) : null, off = dv==='low' || dv==='high';
   box.classList.toggle('bad', !!off);
   box.innerHTML = `Hasil <b>${pct(p)}</b>. Sisa kupas ${kg(g-n)} (${pct((g-n)/g*100)}).`
-    + (ref ? (off ? `<br><b>Jauh dari biasanya</b> (sekitar ${pct(ref.p)}, ${esc(ref.src)}). Periksa lagi timbangan berat kotor dan bersih.` : `<br><span class="hint">Biasanya sekitar ${pct(ref.p)}.</span>`) : '');
+    + (ref ? (dv==='low' ? `<br><b>Di bawah biasanya</b> (sekitar ${pct(ref.p)}, ${esc(ref.src)}). Periksa lagi timbangan berat kotor dan bersih.`
+      : dv==='high' ? `<br><b>Jauh di atas biasanya</b> (sekitar ${pct(ref.p)}, ${esc(ref.src)}). Bagus kalau benar, cek lagi timbangan supaya tidak tertukar.`
+      : dv==='up' ? `<br><b>Lebih efisien dari biasanya</b> (sekitar ${pct(ref.p)}, ${esc(ref.src)}).`
+      : `<br><span class="hint">Biasanya sekitar ${pct(ref.p)}.</span>`) : '');
 }
 // Hasil kupas yang biasa untuk satu buah: rata-rata 90 hari terakhir (min. 3 catatan), atau angka acuan timbang.
 function yieldRef(fid, name, skipId){
@@ -1960,7 +1967,8 @@ function yieldRef(fid, name, skipId){
 function yieldOff(e){
   if((e.type!=='produksi' && e.type!=='frozen') || e.kg_net==null || !(Number(e.kg)>0)) return null;
   const ref = yieldRef(e.fruit_id, fruitName(e.fruit_id), e.id), p = Number(e.kg_net)/Number(e.kg)*100;
-  return ref && Math.abs(p-ref.p) > YIELD_TOL ? {p, ref} : null;
+  const dv = ref ? yieldDev(p, ref.p) : null;
+  return dv==='low' || dv==='high' ? {p, ref, dv} : null;
 }
 function updateUnitLabel(){
   const el = $('#s-ulbl'); if(!el) return;
@@ -2315,7 +2323,7 @@ function checksFor(day){
   }
   live.forEach(e => {
     const y = yieldOff(e);
-    if(y) out.push({lv:'bad', t:`Hasil kupas ${fruitName(e.fruit_id)} ${pct(y.p)}`, h:`Biasanya sekitar ${pct(y.ref.p)}. ${kg(Number(e.kg_net))} dari ${kg(Number(e.kg))}, oleh ${profName(e.created_by)}.`});
+    if(y) out.push({lv: y.dv==='low'?'bad':'mid', t:`Hasil kupas ${fruitName(e.fruit_id)} ${pct(y.p)}${y.dv==='high'?', jauh di atas biasanya':''}`, h:`Biasanya sekitar ${pct(y.ref.p)}. ${y.dv==='high'?'Bagus kalau benar, cek timbangan supaya tidak tertukar. ':''}${kg(Number(e.kg_net))} dari ${kg(Number(e.kg))}, oleh ${profName(e.created_by)}.`});
     if(e.type==='koreksi' && (Math.abs(Number(e.kg))>=OPNAME_BIG || (e.kg==null && e.pcs!=null))) out.push({lv:'mid', t:`Koreksi opname ${fruitName(e.fruit_id)} ${qtyLbl(e)}`, h:`Oleh ${profName(e.created_by)}.`});
     if(e.type==='waste' && e.category==='lainnya') out.push({lv:'mid', t:`Waste ${fruitName(e.fruit_id)} ${qtyLbl(e)} (lainnya)`, h:`${e.note?e.note.replace(/[.\s]+$/,'')+'. ':''}Oleh ${profName(e.created_by)}.`});
   });
