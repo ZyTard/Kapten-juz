@@ -123,6 +123,7 @@ const rp = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',m
 const dateLabel = d => new Date(d+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
 const monthLabel = m => new Date(m+'-01T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'});
 const monthShort = m => new Date(m+'-01T00:00:00').toLocaleDateString('id-ID',{month:'short'});
+const dtLabel = ms => new Date(ms).toLocaleDateString('id-ID',{day:'numeric',month:'short'})+' '+timeLabel(ms);
 const timeLabel = ms => new Date(ms).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
@@ -413,8 +414,8 @@ function detail(e){
   if(e.type==='waste'){ p.push(CATS[e.category]||e.category); p.push('tahap '+(STAGES[e.stage]||e.stage).toLowerCase()); }
   if(isDirect(e)) p.push('utuh, tanpa kupas');
   else if(e.note) p.push(e.note);
-  p.push('oleh '+profName(e.created_by));
-  if(e.edit_count>0) p.push('diubah '+e.edit_count+'x'+(e.edited_by?' oleh '+profName(e.edited_by):''));
+  p.push('oleh '+profName(e.created_by)+(e.created_at?', pukul '+timeLabel(Date.parse(e.created_at)):''));
+  if(e.edit_count>0) p.push('diubah '+e.edit_count+'x'+(e.edited_by?' oleh '+profName(e.edited_by):'')+(e.edited_at?', '+dtLabel(Date.parse(e.edited_at)):''));
   if(e._edited) p.push('perubahan belum terkirim');
   return p.join(', ');
 }
@@ -1932,8 +1933,8 @@ function sDetail(e){
   if(e.type==='pindah') p.push('gudang ke dapur');
   if((e.type==='rusak' || e.type==='koreksi') && e.loc) p.push(e.loc==='dapur'?'di dapur produksi':'di gudang');
   if(e.note) p.push(e.note);
-  p.push('oleh '+profName(e.created_by));
-  if(e.edit_count>0) p.push('diubah '+e.edit_count+'x'+(e.edited_by?' oleh '+profName(e.edited_by):''));
+  p.push('oleh '+profName(e.created_by)+(e.created_at?', pukul '+timeLabel(Date.parse(e.created_at)):''));
+  if(e.edit_count>0) p.push('diubah '+e.edit_count+'x'+(e.edited_by?' oleh '+profName(e.edited_by):'')+(e.edited_at?', '+dtLabel(Date.parse(e.edited_at)):''));
   if(e._edited) p.push('perubahan belum terkirim');
   return p.join(', ');
 }
