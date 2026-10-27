@@ -187,3 +187,30 @@ dialog::backdrop{background:rgba(2,7,6,.62)}
    Putih pekat hanya untuk: menu aktif di navigasi dan tombol simpan pada formulir. */
 .btn.pri[data-v="opname"]{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.55);color:#fff;box-shadow:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .btn.pri[data-v="opname"]:hover{background:rgba(255,255,255,.16)}
+
+/* ============================================================
+   MODE RINGAN (optimasi performa HP)
+   Blur latar adalah bagian paling mahal bagi GPU, apalagi bila bersarang. Di atas aurora
+   yang mulus, blur nyaris tak terlihat bedanya, jadi di layar sempit diganti latar
+   semi-pekat. Tampilan tetap kaca, bebannya turun. Layar lebar (desktop) tetap berblur.
+   ============================================================ */
+/* Aurora jadi lapisan GPU sendiri: tidak dilukis ulang saat halaman digulir */
+body::before{transform:translateZ(0);will-change:transform;contain:strict}
+/* Daftar panjang: elemen di luar layar tidak dihitung tata letak dan lukisnya */
+.he,.fr{content-visibility:auto;contain-intrinsic-size:auto 120px}
+.sr{content-visibility:auto;contain-intrinsic-size:auto 61px}
+/* Elemen kecil tidak perlu blur sendiri (dan menyebabkan blur bersarang di dalam kartu) */
+.btn,.seg,.chip-s,.avatar,.btn[data-v="opname"]{-webkit-backdrop-filter:none;backdrop-filter:none}
+.lvl i,.meter i{box-shadow:none}
+
+@media (max-width:899px){
+  *,*::before,*::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  .top{background:linear-gradient(180deg,#050B0A,#07130F)}
+  .tabs{background:#0A1814;box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 6px 16px rgba(0,0,0,.4)}
+  dialog{background:linear-gradient(180deg,rgb(22,48,42),rgb(9,22,19))}
+  /* Bayangan besar di tiap kartu diganti tepi terang 1px (murah dilukis) */
+  .card,.fc,.slist,.sm,.sc,.an,.sum,.grid2,.kpi,.pf,.neg-box,.ripe-box,.upd{box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+  .btn.pri,.btn.waste{box-shadow:0 2px 8px rgba(0,0,0,.35)}
+  .top-logo{filter:none}
+  #toast{box-shadow:0 4px 14px rgba(0,0,0,.4)}
+}
