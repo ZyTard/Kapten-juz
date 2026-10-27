@@ -1,0 +1,73 @@
+/* ============================================================
+   Kapten Juz — lapisan "Feel": rasa interaksi (hanya CSS). Dimuat SETELAH ui-taste.css.
+   Prinsip: gerak hanya untuk umpan balik, kesinambungan ruang, dan mencegah perubahan
+   mendadak. Hanya transform + opacity. Maks 250 ms untuk UI. Ease-out kuat, bukan ease-in.
+   Aksi yang sering (ganti tab, buka daftar) dibuat nyaris tak terasa; tidak ada gerak pada data.
+   Cara mematikan: hapus satu baris <link> ke berkas ini.
+   ============================================================ */
+:root{
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --ease-in-out:cubic-bezier(.77,0,.175,1);
+}
+
+/* 1. Umpan balik sentuh: respon saat ditekan, bukan saat dilepas. */
+.btn,.chip,.seg button,.he .x,.tabs button,.link,.car-b{
+  transition:transform 140ms var(--ease-out),background-color 140ms ease,border-color 140ms ease,color 140ms ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:active,.chip:active,.he .x:active{transform:scale(.97)}
+.seg button:active{transform:scale(.97)}
+.tabs button:active svg{transform:scale(.88)}
+.tabs svg{transition:transform 160ms var(--ease-out),stroke 140ms ease}
+.sr>summary{transition:background-color 120ms ease}
+.sr>summary:active{background:var(--active)}
+
+/* Layar sentuh: hover tidak boleh "menempel" setelah ditap. */
+@media (hover:none){
+  .btn:hover{background:var(--surface);border-color:var(--control)}
+  .btn.pri:hover,.btn.waste:hover{background:var(--primary);border-color:var(--primary)}
+  .he .x:hover{background:var(--surface)}
+  .he .x:not(.ed):hover{background:var(--surface)}
+  .sr>summary:hover{background:transparent}
+  .sr[open]>summary:hover{background:var(--raised)}
+}
+
+/* 2. Ganti tab (puluhan kali sehari): sangat singkat, hanya sedikit naik. */
+main.pg{animation:pgIn 150ms var(--ease-out) both}
+@keyframes pgIn{from{opacity:.0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* 3. Daftar stok: baris yang dibuka muncul dari atas pemicunya, batang level terisi dari kiri. */
+.sr[open] .sr-d{animation:srOpen 180ms var(--ease-out) both}
+@keyframes srOpen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.sr[open] .lvl i{transform-origin:left center;animation:lvlFill 260ms var(--ease-out) 40ms both}
+@keyframes lvlFill{from{transform:scaleX(.02)}to{transform:none}}
+.sr-c{transition:transform 180ms var(--ease-out)}
+
+/* 4. Dialog: jarang muncul, jadi boleh terasa. Masuk dari scale .96 (bukan 0), keluar lebih cepat. */
+dialog{
+  opacity:0;transform:scale(.96) translateY(6px);transform-origin:center;
+  transition:opacity 120ms ease,transform 120ms ease,overlay 120ms allow-discrete,display 120ms allow-discrete;
+}
+dialog[open]{
+  opacity:1;transform:none;
+  transition:opacity 180ms var(--ease-out),transform 220ms var(--ease-out),overlay 220ms allow-discrete,display 220ms allow-discrete;
+}
+@starting-style{dialog[open]{opacity:0;transform:scale(.96) translateY(6px)}}
+dialog::backdrop{opacity:0;transition:opacity 150ms ease,overlay 150ms allow-discrete,display 150ms allow-discrete}
+dialog[open]::backdrop{opacity:1}
+@starting-style{dialog[open]::backdrop{opacity:0}}
+
+/* 5. Toast: naik sedikit dari tepi bawah, keluar lebih cepat dari masuknya. */
+#toast{transform:translate(-50%,10px);transition:opacity 140ms ease,transform 140ms ease}
+#toast.on{transform:translate(-50%,0);transition:opacity 200ms var(--ease-out),transform 240ms var(--ease-out)}
+
+/* 7. Kurangi gerak: tanpa pergeseran, tanpa skala; transisi opasitas tetap ada. */
+@media (prefers-reduced-motion:reduce){
+  main.pg{animation:pgFade 120ms ease both}
+  @keyframes pgFade{from{opacity:.4}to{opacity:1}}
+  .sr[open] .sr-d{animation:pgFade 120ms ease both}
+  .sr[open] .lvl i{animation:none}
+  .btn:active,.chip:active,.he .x:active,.seg button:active,.tabs button:active svg{transform:none}
+  dialog,dialog[open]{transform:none;transition:opacity 120ms ease,overlay 120ms allow-discrete,display 120ms allow-discrete}
+  #toast,#toast.on{transform:translateX(-50%);transition:opacity 120ms ease}
+}

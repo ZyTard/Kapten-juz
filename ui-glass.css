@@ -1,0 +1,189 @@
+/* ============================================================
+   Kapten Juz — tema "Glass" (gelap + kaca). Hanya gaya, tanpa mengubah data atau fitur.
+   Urutan muat: base.css, dashboard.css, ui-taste.css, ui-glass.css, ui-feel.css
+   Kaca (blur) hanya dipakai pada lapisan yang melayang atau berkelompok: header, nav,
+   ringkasan, kartu, dialog. Baris daftar panjang dibuat tembus pandang TANPA blur
+   supaya HP kelas menengah tetap mulus. Hijau-pucuk merek dipakai pada angka utama.
+   Cara mematikan: hapus satu baris <link> ke berkas ini.
+   ============================================================ */
+:root{
+  --g-ground:#050B0A;
+  --au-1:rgba(38,128,104,.62); --au-2:rgba(24,98,96,.50); --au-3:rgba(16,74,70,.55); --au-4:rgba(60,150,120,.30); --au-5:rgba(30,110,100,.30);
+  --ground:#050B0A; --paper:#050B0A;
+  --surface:rgba(255,255,255,.07);
+  --raised:rgba(255,255,255,.10);
+  --active:rgba(255,255,255,.14);
+  --border:rgba(255,255,255,.14);
+  --line:rgba(255,255,255,.14);
+  --rule:rgba(255,255,255,.09);
+  --control:rgba(255,255,255,.24);
+  --text:#F5F4FB; --ink:#F5F4FB;
+  --muted:rgba(245,244,251,.66);
+  --primary:#FFFFFF;
+  --accent:#C9F26A;               /* pucuk: hijau-lime merek, hanya pada data utama */
+  --positive:#7BE0A0; --negative:#FF8A80;
+  --ok-bg:rgba(123,224,160,.16);  --ok-ink:#B5F2CB;
+  --warn-bg:rgba(255,190,90,.15); --warn-line:rgba(255,190,90,.34); --warn-ink:#FFD596;
+  --neg-bg:rgba(255,120,110,.16); --neg-line:rgba(255,120,110,.38); --neg-ink:#FFB4AC;
+  --card:rgba(255,255,255,.07);
+  --pucuk:#C9F26A; --pucuk-s:rgba(201,242,106,.14);
+  --glass-bg:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));
+  --glass-blur:blur(22px) saturate(160%);
+  --glass-edge:inset 0 1px 0 rgba(255,255,255,.20),0 12px 32px rgba(0,0,0,.32);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:20px; --r-in:14px;
+  --side:transparent; --side-on:rgba(255,255,255,.14); --side-ink:rgba(245,244,251,.66);
+  color-scheme:dark;
+}
+html{background:#050B0A}
+body{background:transparent;color:var(--text);min-height:100vh}
+/* Aurora: statis, satu lapisan tetap di belakang segalanya */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(70% 34% at 18% -4%,var(--au-1),transparent 74%),
+    radial-gradient(56% 30% at 98% 6%,var(--au-4),transparent 74%),
+    radial-gradient(48% 28% at 60% 48%,var(--au-5),transparent 74%),
+    radial-gradient(72% 40% at 2% 100%,var(--au-3),transparent 74%),
+    radial-gradient(60% 36% at 100% 94%,var(--au-2),transparent 74%),
+    linear-gradient(180deg,#0A1F1A 0%,#07120F 38%,#050B0A 100%)}
+::selection{background:rgba(201,242,106,.35);color:#fff}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* ---------- Judul: mono, seperti referensi ---------- */
+h1,h2,h3,.top h1,.card h2,.sec h2,.dl h2,.empty h2{font-family:var(--mono);letter-spacing:-.015em;font-weight:600;color:var(--text)}
+.top h1{font-size:19px;letter-spacing:-.03em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Header ---------- */
+.top{background:linear-gradient(180deg,rgba(5,11,10,.66),rgba(5,11,10,.30));-webkit-backdrop-filter:blur(16px) saturate(150%);backdrop-filter:blur(16px) saturate(150%);border-bottom:1px solid var(--rule);color:var(--text)}
+.top-logo{filter:drop-shadow(0 2px 8px rgba(0,0,0,.35))}
+.chip-s,.chip-s.ok,.chip-s.mid,.chip-s.bad{background:rgba(255,255,255,.10);color:var(--text);border:1px solid var(--border);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.chip-s::before{background:var(--positive)}
+.chip-s.mid::before{background:#FFC25A}
+.chip-s.bad::before{background:var(--negative)}
+.avatar{background:rgba(255,255,255,.12);color:var(--text);border:1px solid var(--border);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+
+/* ---------- Permukaan kaca (berkelompok, sedikit jumlahnya) ---------- */
+.card,.fc,.slist,.sm,.sc,.an,.sum,.grid2,.kpi,.pf,.neg-box,.ripe-box,.upd{
+  background:var(--glass-bg);border:1px solid var(--border);box-shadow:var(--glass-edge);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);color:var(--text)}
+/* Baris daftar: tembus pandang tanpa blur (hemat GPU) */
+.he,.fr,.ripe-i{background:rgba(255,255,255,.065);border:1px solid var(--rule);box-shadow:inset 0 1px 0 rgba(255,255,255,.10);-webkit-backdrop-filter:none;backdrop-filter:none}
+.slist{overflow:hidden}
+.sr>summary:hover,.sr[open]>summary{background:rgba(255,255,255,.06)}
+.sr-d{background:rgba(0,0,0,.18);border-top:1px solid var(--rule)}
+.sr-c{stroke:var(--muted)}
+.grid2{background:var(--glass-bg)}
+.grid2>div:nth-child(odd){border-right-color:var(--rule)}
+.grid2>div:nth-child(n+3){border-top-color:var(--rule)}
+
+/* ---------- Teks dan angka ---------- */
+.hint,.lbl,.sub,small,.he-d,.sr-v small,.field label,.lbl-f,th,.mini dt,.sum .lbl,.grid2 .lbl{color:var(--muted)}
+.sum strong,.kpi.rend .big{color:var(--accent)}
+.sum .w strong,.sum .fz strong,.grid2 strong,.kpi .big,.sr-v b,.mini dd,.he-k,.he-t strong{color:var(--text)}
+.sum .fz{border-top-color:var(--rule)}
+.sr.neg>summary{box-shadow:inset 3px 0 0 var(--negative)}
+.sr.neg .sr-v b,.mini .w dd,tr.off td b,.warn{color:var(--neg-ink)}
+.sr.low>summary{box-shadow:inset 3px 0 0 #FFC25A}
+.mini{border-top-color:var(--rule)}
+.lvl,.meter,.bar-t{background:rgba(255,255,255,.12)}
+.lvl i,.meter i{background:var(--accent);background-image:none;box-shadow:0 0 10px rgba(201,242,106,.35)}
+.bar-t i{background:#FF9A5A}
+td{border-bottom-color:var(--rule)}
+tr.off td{background:var(--neg-bg)}
+.viz .ax{stroke:rgba(255,255,255,.14)}
+.viz text{fill:var(--muted)}
+.link{color:var(--accent)}
+details.dt summary{color:var(--accent)}
+hr{border-color:var(--rule)}
+
+/* ---------- Tombol: utama putih (seperti bulatan aktif di referensi) ---------- */
+.btn{background:rgba(255,255,255,.08);border:1px solid var(--control);color:var(--text);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.btn:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4)}
+.btn.pri,.btn.waste{background:#fff;border-color:#fff;color:#06120E;box-shadow:0 6px 20px rgba(0,0,0,.35);-webkit-backdrop-filter:none;backdrop-filter:none}
+.btn.pri:hover,.btn.waste:hover{background:#E3F1EA;border-color:#E3F1EA}
+.btn.danger,.he .x:not(.ed){color:var(--neg-ink);border-color:var(--neg-line);background:rgba(255,120,110,.08)}
+.btn.ghost{background:transparent}
+.chip{background:rgba(255,255,255,.08);border:1px solid var(--control);color:var(--text)}
+.chip[aria-pressed="true"]{background:rgba(255,255,255,.20);border-color:rgba(255,255,255,.75);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.he .x,.he .x.ed{background:rgba(255,255,255,.08);border-color:var(--control);color:var(--text)}
+.he .x:hover{background:rgba(255,255,255,.14)}
+.he-a{border-top-color:var(--rule)}
+.he.pend{border-color:#FFC25A}
+
+/* ---------- Isian ---------- */
+input,select,textarea,.srch{background:rgba(255,255,255,.07);border:1px solid var(--control);color:var(--text)}
+input::placeholder,textarea::placeholder{color:rgba(245,244,251,.45)}
+input:focus,select:focus,textarea:focus{border-color:#fff;box-shadow:0 0 0 1px #fff;background:rgba(255,255,255,.10)}
+.srch:focus-within{border-color:#fff;box-shadow:0 0 0 1px #fff}
+.srch input,.srch input:focus{background:transparent;border:0;box-shadow:none}
+select option,select optgroup{background:#0F1F1B;color:#F5F4FB}
+.seg{background:rgba(255,255,255,.07);border:1px solid var(--border);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.seg button{color:var(--muted)}
+.seg button[aria-selected="true"],.seg .seg-masuk[aria-selected="true"],.seg .seg-produksi[aria-selected="true"],.seg .seg-eceran[aria-selected="true"],.seg .seg-waste[aria-selected="true"],.seg .seg-frozen[aria-selected="true"],.seg .seg-dari_freezer[aria-selected="true"]{background:rgba(255,255,255,.20);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+
+/* ---------- Status dan peringatan ---------- */
+.pill::before{background:currentColor}
+.st-aman{background:var(--ok-bg);color:var(--ok-ink)}
+.st-menipis,.st-segera{background:var(--warn-bg);color:var(--warn-ink);box-shadow:inset 0 0 0 1px var(--warn-line)}
+.st-habis,.st-minus{background:var(--neg-bg);color:var(--neg-ink);box-shadow:inset 0 0 0 1px var(--neg-line)}
+.st-nodata{background:rgba(255,255,255,.10);color:var(--muted)}
+.tag.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.tag.bad{background:var(--neg-bg);color:var(--neg-ink)}
+.tag.pcs{background:rgba(255,255,255,.10);color:var(--text)}
+.badge,.b-masuk,.b-produksi,.b-eceran,.b-koreksi,.b-frozen,.b-dari_freezer,.r-manager,.r-admin,.r-produksi,.r-kasir{background:rgba(255,255,255,.12);color:var(--text)}
+.b-waste{background:var(--neg-bg);color:var(--neg-ink)}
+.b-pend{background:var(--warn-bg);color:var(--warn-ink);box-shadow:inset 0 0 0 1px var(--warn-line)}
+.neg-box{background:linear-gradient(180deg,rgba(255,120,110,.20),rgba(255,120,110,.10));border-color:var(--neg-line);color:var(--neg-ink)}
+.fc.low,.card.low,.ripe-box,.upd{background:linear-gradient(180deg,rgba(255,190,90,.17),rgba(255,190,90,.08));border-color:var(--warn-line);color:var(--text)}
+.ripe-i.now{background:var(--ok-bg);border-color:rgba(123,224,160,.35)}
+.ripe-i.late{background:var(--neg-bg);border-color:var(--neg-line)}
+.chk-i{background:var(--warn-bg);border-left:3px solid #FFC25A;color:var(--text)}
+.chk-i.bad{background:var(--neg-bg);border-left-color:var(--negative)}
+.err{background:var(--neg-bg);color:var(--neg-ink)}
+.yield{background:var(--ok-bg);color:var(--ok-ink)}
+.yield.bad{background:var(--neg-bg);color:var(--neg-ink)}
+.tip,.an .buy{background:rgba(255,255,255,.10);color:var(--text)}
+#tip{background:rgba(10,24,21,.94);color:var(--text);border:1px solid var(--border)}
+
+/* ---------- Navigasi bawah: pil kaca, bulatan aktif putih ---------- */
+.tabs{background:rgba(8,20,17,.60);border:1px solid var(--border);border-radius:28px;padding:6px;-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 16px 40px rgba(0,0,0,.5)}
+.tabs button{color:var(--muted);border-radius:22px}
+.tabs svg{stroke:var(--muted)}
+.tabs button[aria-current="page"]{background:#fff;color:#06120E;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.tabs button[aria-current="page"] svg{stroke:#06120E}
+
+/* ---------- Dialog dan toast ---------- */
+dialog{background:linear-gradient(180deg,rgba(22,48,42,.90),rgba(9,22,19,.95));color:var(--text);border:1px solid var(--border);-webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 24px 70px rgba(0,0,0,.6)}
+dialog::backdrop{background:rgba(2,7,6,.62)}
+#toast{background:rgba(255,255,255,.94);color:#06120E;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+
+/* ---------- Login ---------- */
+.login{color:var(--text)}
+
+/* ---------- Layar lebar ---------- */
+@media (min-width:900px){
+  .top{background:linear-gradient(180deg,rgba(5,11,10,.55),rgba(5,11,10,.2))}
+  .tabs{padding:104px 14px 16px;background:rgba(255,255,255,.04);border:0;border-right:1px solid var(--rule);border-radius:0;box-shadow:none;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+  .tabs button{border-radius:12px;min-height:36px;color:var(--muted)}
+  .tabs svg{stroke:currentColor}
+  .tabs button[aria-current="page"] svg{stroke:currentColor}
+  .tabs button:hover{background:rgba(255,255,255,.10);color:var(--text)}
+  .tabs button[aria-current="page"]{background:#fff;color:#06120E}
+}
+
+/* ---------- Cadangan: tanpa dukungan blur, atau pengguna meminta transparansi dikurangi ---------- */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .card,.fc,.slist,.sm,.sc,.an,.sum,.grid2,.kpi,.pf,.tabs,dialog,.top{background:#10211D}
+}
+@media (prefers-reduced-transparency:reduce){
+  .card,.fc,.slist,.sm,.sc,.an,.sum,.grid2,.kpi,.pf,.tabs,dialog,.top,.chip-s,.avatar,.btn,.seg{background:#10211D;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .btn.pri,.btn.waste{background:#fff}
+}
+@media (prefers-contrast:more){
+  :root{--muted:rgba(245,244,251,.86);--border:rgba(255,255,255,.34);--control:rgba(255,255,255,.5)}
+}
+
+/* Hierarki: tombol jarang-pakai (Opname) tidak boleh lebih menonjol daripada angka total.
+   Putih pekat hanya untuk: menu aktif di navigasi dan tombol simpan pada formulir. */
+.btn.pri[data-v="opname"]{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.55);color:#fff;box-shadow:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.btn.pri[data-v="opname"]:hover{background:rgba(255,255,255,.16)}

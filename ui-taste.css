@@ -1,0 +1,222 @@
+/* ============================================================
+   Kapten Juz — lapisan tampilan "Taste" (hanya gaya, tanpa mengubah data atau fitur)
+   Dimuat PALING AKHIR, setelah base.css dan dashboard.css.
+   Gaya: achromatic ledger. Chrome netral (ink, abu), tombol utama hitam pekat,
+   warna merek hijau daun HANYA pada data utama. Tanpa gradien, glow, blur, bayangan saat diam.
+   Cara mematikan: hapus satu baris <link> ke berkas ini.
+   ============================================================ */
+:root{
+  --ground:#F2F5F2;          /* sage: dari dunia buah dan kebun */
+  --paper:#F2F5F2;
+  --surface:#FFFFFF;
+  --raised:#F8FAF8;
+  --active:#E7ECE7;          /* pil netral untuk menu aktif dan pilihan */
+  --border:#E1E7E1;
+  --line:#E1E7E1;
+  --rule:#EDF1ED;
+  --control:#CBD3CC;
+  --text:#111111;
+  --ink:#111111;
+  --muted:#59635D;           /* 5.9:1 di atas ground */
+  --primary:#1D1F20;
+  --accent:#1F7A57;          /* hijau daun merek: satu-satunya hue, pada data */
+  --positive:#247B50;
+  --negative:#C4242A;
+  --warn-bg:#FFFBEB; --warn-line:#FDE68A; --warn-ink:#92400E;
+  --neg-bg:#FFEDEA;  --neg-line:#F3C9C3; --neg-ink:#831C1E;
+  --ok-bg:#E3F3E8;   --ok-ink:#0B3D25;
+  --r:8px; --r-in:6px;
+  --side:#F2F5F2; --side-on:#E7ECE7; --side-ink:#59635D;
+  color-scheme:light;
+}
+body{font-feature-settings:"tnum" 1,"lnum" 1;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;touch-action:manipulation}
+h1,h2,h3{text-wrap:balance;font-weight:600}
+p,.hint,.he-d{text-wrap:pretty}
+:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+button,.chip,.btn,.seg button,.tabs button,summary{touch-action:manipulation}
+strong,b{font-weight:600}
+
+/* ---------- Header: duduk di ground, tanpa blok warna ---------- */
+.top{background:var(--ground);color:var(--text);border-radius:0;box-shadow:none;border-bottom:1px solid var(--border);padding:calc(8px + env(safe-area-inset-top)) 16px 9px}
+.top-in{gap:10px}
+.top-logo{height:30px;padding:0;border-radius:6px;background:transparent}
+.top h1{font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2;color:var(--text)}
+.chip-s,.chip-s.ok,.chip-s.mid,.chip-s.bad{background:var(--surface);color:var(--text);border:1px solid var(--control);min-height:30px;padding:2px 11px 2px 9px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;position:relative}
+.chip-s::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--positive)}
+.chip-s.mid::before{background:#B7791F}
+.chip-s.bad::before{background:var(--negative)}
+.chip-s::after,.avatar::after{content:"";position:absolute;inset:-8px -4px}
+.avatar{position:relative;width:34px;height:34px;font-size:14px;font-weight:600;background:var(--active);color:var(--text);border:1px solid var(--control);box-shadow:none}
+
+/* ---------- Isi ---------- */
+main{padding-top:16px;gap:12px}
+.card,.fc,.slist,.sm,.sc,.an,.he,.grid2,.pf,.ripe-i,.fr{box-shadow:none}
+.card,.fc,.slist,.sm,.sc,.an,.he{background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.card{padding:16px}
+.card h2,.sec h2{font-size:16px;font-weight:600;letter-spacing:-.005em}
+.empty h2{font-size:18px}
+
+/* Tombol: satu primer hitam pekat */
+.btn{border:1px solid var(--control);background:var(--surface);color:var(--text);border-radius:var(--r-in);min-height:44px;font-weight:600;transition:background-color .12s,border-color .12s,transform .08s}
+.btn:hover{background:var(--raised);border-color:#A9B4AC}
+.btn.pri,.btn.waste{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:none}
+.btn.pri:hover,.btn.waste:hover{background:#000;border-color:#000}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--neg-ink);border-color:var(--neg-line)}
+.btn.sm{min-height:44px;border-radius:var(--r-in)}
+.link{color:var(--text);text-decoration:underline;text-underline-offset:3px;font-weight:600;min-height:44px;display:inline-flex;align-items:center}
+details.dt summary{min-height:44px;color:var(--text)}
+.chip{min-height:44px;padding:6px 16px;border-radius:var(--r-in);border:1px solid var(--control);font-weight:600;background:var(--surface)}
+.chip[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:none}
+
+/* ---------- Stok: ringkasan sebagai satu kontainer, angka utama berhue ---------- */
+.sum{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r);box-shadow:none;padding:18px 18px 16px}
+.sum .lbl{font-size:13px;font-weight:500;color:var(--muted);line-height:1.3}
+.sum strong{font-size:32px;font-weight:600;letter-spacing:-.02em;color:var(--accent)}
+.sum .w strong{color:var(--text)}
+.sum .fz{border-top:1px solid var(--rule);padding-top:12px}
+.sum .fz strong{font-size:20px;color:var(--text)}
+.stk.frz strong{color:var(--text)}
+
+/* ---------- Kartu angka (Hari ini, Laporan): satu kontainer berpembatas 1px ---------- */
+.grid2{gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.grid2>div{background:transparent;border:0;border-radius:0;padding:14px 16px 13px;display:flex;flex-direction:column;gap:3px;box-shadow:none}
+.grid2>div:nth-child(odd){border-right:1px solid var(--rule)}
+.grid2>div:nth-child(n+3){border-top:1px solid var(--rule)}
+.grid2>div:last-child:nth-child(odd){grid-column:1/-1;border-right:0}
+.grid2>div br{display:none}
+.grid2 .lbl{font-size:13px;font-weight:500;color:var(--muted);line-height:1.25}
+.grid2 strong{font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.15;color:var(--text)}
+.grid2 .hint{font-size:12.5px;line-height:1.35;margin-top:1px}
+
+/* ---------- Daftar stok ---------- */
+.slist{border-radius:var(--r)}
+.sr>summary{padding:12px 16px;min-height:60px}
+.sr>summary:hover,.sr[open]>summary{background:var(--raised)}
+.sr-n{font-weight:600;font-size:16px}
+.sr-v b{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.sr-v small,.sr-v small.sr-k{color:var(--muted);font-weight:500;font-size:12px}
+.sr-d{background:var(--raised);border-top:1px solid var(--rule);padding:8px 16px 16px;gap:10px}
+.sr.neg>summary{box-shadow:inset 3px 0 0 var(--negative)}
+.sr.neg .sr-v b{color:var(--neg-ink)}
+.sr.low>summary{box-shadow:inset 3px 0 0 #B7791F}
+.mini{border-top:1px solid var(--rule)}
+.mini dt{font-size:12.5px;font-weight:500}
+.mini dd{font-size:16px;font-weight:600}
+.mini .w dd{color:var(--neg-ink)}
+.lvl{height:6px;background:var(--active)}
+.lvl i{background:var(--accent);background-image:none}
+.stk strong{font-weight:600}
+
+/* Status: pil pucat, teks gelap sewarna */
+.pill{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st-aman{background:var(--ok-bg);color:var(--ok-ink)}
+.st-menipis,.st-segera{background:var(--warn-bg);color:var(--warn-ink);box-shadow:inset 0 0 0 1px var(--warn-line)}
+.st-habis,.st-minus{background:var(--neg-bg);color:var(--neg-ink)}
+.st-nodata{background:var(--active);color:#3F4943}
+.tag.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.tag.bad{background:var(--neg-bg);color:var(--neg-ink)}
+.tag.pcs{background:var(--active);color:var(--text)}
+
+/* Peringatan dan kotak info: pasangan pucat, tanpa bayangan */
+.neg-box{background:var(--neg-bg);border:1px solid var(--neg-line);color:var(--neg-ink);border-radius:var(--r)}
+.fc.low,.card.low,.ripe-box,.upd{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--r);box-shadow:none}
+.ripe-i{background:var(--surface)}
+.ripe-i.now{background:var(--ok-bg);border-color:#BFE0CC}
+.ripe-i.late{background:var(--neg-bg);border-color:var(--neg-line)}
+.chk-i{background:var(--warn-bg);border-left:3px solid #B7791F;border-radius:var(--r-in)}
+.chk-i.bad{background:var(--neg-bg);border-left-color:var(--negative)}
+.warn{color:var(--neg-ink);font-weight:600}
+.err{background:var(--neg-bg);color:var(--neg-ink);border-radius:var(--r-in)}
+.yield{background:var(--ok-bg);color:var(--ok-ink);border-radius:var(--r-in)}
+.yield.bad{background:var(--neg-bg);color:var(--neg-ink)}
+.tip,.an .buy{background:var(--active);color:var(--text);border-radius:var(--r-in)}
+
+/* ---------- Pencarian dan filter ---------- */
+.srch{height:46px;border-radius:var(--r-in);border:1px solid var(--control);background:var(--surface);box-shadow:none}
+.srch:focus-within{border-color:var(--text);box-shadow:0 0 0 1px var(--text)}
+.chips{padding:2px 2px 6px;margin:0 -2px}
+
+/* ---------- Riwayat ---------- */
+.hist{gap:8px}
+.he{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"b k" "a a";gap:6px 12px;padding:14px 14px 10px;align-items:start}
+.he>div:last-child{display:contents}
+.he-b{grid-area:b}
+.he-k{grid-area:k;font-size:18px;font-weight:600;letter-spacing:-.01em;text-align:right}
+.he-a{grid-area:a;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding-top:10px;margin-top:2px;border-top:1px solid var(--rule)}
+.he-a:empty{display:none}
+.he-t strong{font-size:16px;font-weight:600}
+.he-d{font-size:13.5px;line-height:1.45;color:var(--muted)}
+.he .x{min-height:44px;min-width:76px;padding:0 16px;border:1px solid var(--control);border-radius:var(--r-in);background:var(--surface);font-size:14.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;color:var(--text)}
+.he .x:hover{background:var(--raised)}
+.he .x:not(.ed){color:var(--neg-ink);border-color:var(--neg-line)}
+.he .x:not(.ed):hover{background:var(--neg-bg)}
+.he.pend{border:1px dashed #B7791F}
+/* Jenis catatan: chip netral. Hanya waste dan "belum terkirim" membawa isyarat warna. */
+.badge{border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600;background:var(--active);color:var(--text)}
+.b-masuk,.b-produksi,.b-eceran,.b-koreksi,.b-frozen,.b-dari_freezer{background:var(--active);color:var(--text)}
+.b-waste{background:var(--neg-bg);color:var(--neg-ink)}
+.b-pend{background:var(--warn-bg);color:var(--warn-ink);box-shadow:inset 0 0 0 1px var(--warn-line)}
+.r-manager,.r-admin,.r-produksi,.r-kasir{background:var(--active);color:var(--text)}
+
+/* ---------- Catat: pilihan jenis dan isian ---------- */
+.seg{background:var(--active);padding:4px;border-radius:var(--r);gap:4px}
+.seg button{border-radius:var(--r-in);font-weight:600;min-height:44px;color:var(--muted)}
+.seg button[aria-selected="true"],.seg .seg-masuk[aria-selected="true"],.seg .seg-produksi[aria-selected="true"],.seg .seg-eceran[aria-selected="true"],.seg .seg-waste[aria-selected="true"],.seg .seg-frozen[aria-selected="true"],.seg .seg-dari_freezer[aria-selected="true"]{background:var(--surface);color:var(--text);box-shadow:0 0 0 1px var(--control)}
+.field label,.lbl-f{font-size:13.5px;font-weight:500;color:var(--muted)}
+input,select,textarea{min-height:44px;border:1px solid var(--control);border-radius:var(--r-in);background:var(--surface)}
+input:focus,select:focus,textarea:focus{border-color:var(--text);box-shadow:0 0 0 1px var(--text)}
+.kg input{font-weight:600}
+.srch input,.srch input:focus,.srch input:focus-visible{border:0;box-shadow:none}
+
+/* ---------- Tabel dan grafik ---------- */
+th{font-size:12.5px;font-weight:500;color:var(--muted)}
+td{padding:10px 4px;border-bottom:1px solid var(--rule)}
+tr:last-child td{border-bottom:0}
+tr.off td{background:var(--neg-bg)}
+tr.off td b{color:var(--neg-ink)}
+.kpi .big{font-size:40px;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.kpi.rend .big{color:var(--accent)}
+.kpi .sub{color:var(--muted)}
+.meter,.bar-t{background:var(--active)}
+.bar-t i{background:#B8501A}
+.grid2 .lbl{font-weight:500}
+.viz .ax{stroke:#E4EAE4}
+.viz .vl{font-weight:600}
+
+/* ---------- Navigasi bawah: tenang, aktif = pil abu netral ---------- */
+.tabs{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px;box-shadow:0 6px 18px rgba(17,17,17,.08)}
+.tabs button{border-radius:10px;font-size:11.5px;font-weight:600;color:var(--muted);gap:3px;min-height:56px}
+.tabs svg{stroke:var(--muted);width:22px;height:22px;stroke-width:1.75}
+.tabs button[aria-current="page"]{background:var(--active);color:var(--text);box-shadow:none}
+.tabs button[aria-current="page"] svg{stroke:var(--text)}
+
+/* ---------- Dialog dan toast: yang melayang boleh punya bayangan ---------- */
+dialog{border-radius:12px;box-shadow:0 18px 48px rgba(17,17,17,.28)}
+dialog::backdrop{background:rgba(17,17,17,.45);backdrop-filter:none}
+.dl h2{font-size:20px;font-weight:600;letter-spacing:-.01em}
+#toast{border-radius:8px;box-shadow:0 8px 24px rgba(17,17,17,.25);font-size:14.5px;font-weight:600;background:var(--primary)}
+
+/* ---------- Layar lebar: sidebar di atas ground, bukan blok gelap ---------- */
+@media (min-width:900px){
+  .top{padding:18px 28px 12px;border-bottom:1px solid var(--border);background:var(--ground)}
+  .top h1{font-size:24px}
+  main{gap:16px;padding-top:18px}
+  .tabs{background:var(--ground);border:0;border-right:1px solid var(--border);border-radius:0;box-shadow:none;padding:104px 14px 16px}
+  .tabs::before{background-color:transparent}
+  .tabs button{min-height:36px;border-radius:8px;font-size:14px;font-weight:500;color:var(--muted);gap:12px}
+  .tabs button:hover{background:var(--active);color:var(--text)}
+  .tabs svg{width:18px;height:18px;stroke:currentColor}
+  .tabs button[aria-current="page"]{background:var(--active);color:var(--text);box-shadow:none;font-weight:600}
+  .tabs button[aria-current="page"] svg{stroke:currentColor}
+  .btn,.btn.sm,.chip,.seg button{min-height:40px}
+  .he{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"b k a";align-items:center;padding:12px 14px}
+  .he-a{border-top:0;padding-top:0;margin-top:0;margin-left:8px}
+}
+@media (max-width:380px){
+  .grid2 strong{font-size:22px}
+  .sum strong{font-size:28px}
+  .he .x{min-width:68px;padding:0 12px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
